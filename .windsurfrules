@@ -1,0 +1,52 @@
+# Padrão de Refatoração para Páginas com Supabase
+
+## Princípios Gerais
+- Cada página deve ser refatorada seguindo um padrão modular e reutilizável
+- Separar a lógica de formulários em componentes independentes
+- Usar tipagem forte para todos os modelos de dados
+- Integrar diretamente com o Supabase, sem camadas intermediárias
+- Manter uma interface consistente entre todas as páginas
+
+## Estrutura de Arquivos
+1. Para cada entidade (ex: operadoras, corretores, equipes, administradoras):
+   - Arquivo de página principal: `/client/src/pages/[entidade].tsx`
+   - Componente de formulário: `/client/src/components/[entidade]/[entidade-singular]-form.tsx`
+
+## Padrão de Componente de Formulário
+1. Criar interface TypeScript que reflita exatamente a estrutura da tabela no Supabase
+2. Implementar schema Zod para validação dos campos
+3. Exportar tipos para uso na página principal
+4. Implementar mutações para criar, atualizar e excluir registros
+5. Manter estado do formulário com react-hook-form
+6. Usar `as any` apenas onde necessário para contornar limitações de tipagem do Supabase
+
+## Padrão da Página Principal
+1. Importar o componente de formulário e seus tipos
+2. Usar React Query para buscar dados do Supabase
+3. Implementar manipuladores para abrir/fechar diálogos
+4. Extrair toda lógica de formulário para o componente separado
+5. Manter apenas a mutação de exclusão na página principal
+6. Usar a estrutura de UI consistente entre páginas
+
+## Convenções de Nomes
+- Nomes de componentes: PascalCase (singular) - Ex: OperadoraForm, CorretorForm
+- Nomes de arquivos: kebab-case - Ex: operadora-form.tsx, corretor-form.tsx
+- Tipos/Interfaces: PascalCase - Ex: Operadora, Corretor
+- Valores de formulário: PascalCase com sufixo "FormValues" - Ex: OperadoraFormValues
+
+## Tratamento de Erros
+1. Sempre usar blocos try/catch nas chamadas ao Supabase
+2. Adicionar logs detalhados para facilitar depuração
+3. Usar toast para feedback visual ao usuário
+4. Validar dados antes de enviar ao backend
+
+## Performance
+1. Usar invalidateQueries apenas quando necessário
+2. Implementar filtragem de dados no select do React Query
+3. Usar a ordenação do Supabase para dados ordenados
+
+## Boas Práticas
+1. Sempre implementar fallback com conteúdo vazio e mensagens claras
+2. Validar e converter tipos de dados entre frontend e backend
+3. Respeitar as restrições de chave estrangeira
+4. Usar os campos e tipos corretos conforme o schema do banco de dados

@@ -1,0 +1,238 @@
+Crie um sistema (BPM) de Gestão de processos para emissão de propostas de planos de saúde para uma corretora de seguros. Que deve usar Kambam e Cards para gerenciar as propostas. 
+Frontend: React com Vite Estilo: Tailwind CSS
+Cores 1. Roxo VH (#6B1D8C) - Cor primária da marca, usada em títulos, botões e elementos de destaque 2. Fúcsia Impacto (#D340D9) - Cor de destaque/secundária, usada em gradientes e elementos interativos 3. Roxo Claro (#AA2E86) - Cor intermediária, usada principalmente em gradientes e variações 4. Cinza Neutro (#E6E6E6) - Usado para fundos sutis e divisores 5. Cinza Claro Fundo (#F5F5F8) - Usado como fundo neutro para algumas seções 6. Branco (#FFFFFF) - Usado para fundos e texto sobre fundos escuros 7. Preto (#1E1E1E) - Usado no rodapé e em textos principais
+Página de Login (/login)
+	•	Campos:
+	•	E-mail
+	•	Senha
+	•	Botão: Entrar
+
+Área Logada (Dashboard Base)
+Estrutura base:
+	•	Sidebar lateral recolhível (abrir/fechar).
+	•	Header no topo (com nome do usuário logado e botão de logout).
+
+Sidebar Atualizada
+Menus Principais:
+	•	Dashboard
+	•	Quadros de Propostas
+	•	PME Seguradoras
+	•	PME Principais Operadoras
+	•	PME Demais Operadoras
+	•	Pessoa Física
+	•	Adesão
+	•	E-mails
+	•	Operadoras
+	•	Administradoras
+	•	Equipes
+	•	Corretores
+	•	Ajustes
+
+
+📄 Descrição de Conteúdo — Página por Página
+
+1. Login (/login)
+	•	Campos:
+	•	E-mail
+	•	Senha
+	•	Botão:
+	•	Entrar
+	•	Funcionalidades:
+	•	Autenticar o usuário via Supabase Auth.
+	•	Mostrar mensagens de erro se login falhar.
+	•	Redirecionar para /dashboard após login bem-sucedido.
+
+2. Dashboard (/dashboard)
+	•	Cards de Resumo:
+	•	Total de Propostas em Andamento
+	•	Total de Propostas Concluídas
+	•	Propostas Pendentes
+	•	Vendas no Mês
+	•	Gráficos Simples:
+	•	Evolução de Propostas por Mês
+	•	Distribuição de Propostas por Tipo de Modalidade
+	•	Últimas Ações:
+	•	Listagem dos 5 últimos cards movimentados.
+
+3. Quadros de Propostas (/quadros)
+	•	Introdução:
+	•	Explicação breve: “Visualize e gerencie propostas por estágio e modalidade.”
+	•	Botões/Submenus para selecionar qual quadro carregar:
+	•	PME Seguradoras
+	•	PME Principais Operadoras
+	•	PME Demais Operadoras
+	•	Pessoa Física
+	•	Adesão
+
+(Cada submenu leva para o quadro correspondente.)
+
+4. PME Seguradoras (/quadros/pme-seguradoras)
+5. PME Principais Operadoras (/quadros/pme-principais-operadoras)
+6. PME Demais Operadoras (/quadros/pme-demais-operadoras)
+7. Pessoa Física (/quadros/pessoa-fisica)
+8. Adesão (/quadros/adesao)
+	•	Conteúdo idêntico para todos:
+	•	Exibição em formato de Kanban:
+	•	Cada coluna = Um estágio (Entrada de Proposta, Verificação de Documentos, Pendencias Iniciais Aguardando Corretor, Inserção de Dados na Operadora, Avaliação Técnica pela Operadora, Pendência pela Operadora, Assinatura Pendente, Pagamento Pendente, Contrato Ativo Vigente)
+	•	Cada card = Uma proposta (dados básicos: Nome da empresa, Corretor, Equipe, Status, Operadora)
+	•	Botão para:
+	•	Adicionar nova proposta.
+	•	Mover propostas entre colunas (drag and drop).
+	•	Filtros:
+	•	Buscar por Nome da empresa 
+	•	Buscar por CNPJ. 
+        * Filtro por operadora 
+	•	Filtros por status ou corretor.
+
+
+Estrutura Correta de Tela — Card de Proposta PME
+
+🔹 Lado Esquerdo (Fixo): Dados da Proposta
+	•	Cabeçalho:
+	•	Nome da Empresa
+	•	Nome do Corretor
+•             Nome da equipe 
+	•	Status Atual (Badge colorida)
+	•	Informações Básicas:
+	•	Operadora
+	•	Plano
+	•	Modalidade
+	•	Tipo de Contrato
+	•	Coparticipação
+	•	Valor
+	•	Vidas
+	•	Vigência
+	•	Carência
+	•	Operadora Anterior (condicional)
+	•	Dados da Empresa:
+	•	CNPJ
+	•	MEI (Sim/Não)
+	•	Razão Social
+	•	Nome Fantasia
+	•	Data de Abertura
+	•	Natureza Jurídica
+	•	Situação
+	•	CNAE
+	•	Endereço completo
+	•	Sócios:
+	•	Lista de sócios
+	•	Nome / CPF / Telefone / E-mail / Sócio Responsável (Sim/Não)
+	•	Beneficiários:
+	•	Titulares
+	•	Nome / CPF / Data Nascimento / Telefone / E-mail / Nome da Mãe
+	•	Dependentes (por titular)
+	•	Nome / CPF / Data Nascimento / Parentesco
+
+    * Corretor: 
+        * Nome Corretor
+        * E-mail corretor
+        * WhatsApp corretor
+        * Nome equipe 
+        * E-mail equipe 
+
+	•	Observações:
+Campo de texto livre para anotações.
+	•	Documentos Anexados:
+	•	Empresa
+	•	Carência
+	•	Beneficiários
+	•	Cotação
+	•	Outros
+	•	Histórico:
+	•	Criado em
+	•	Criado por
+	•	Última atualização
+	•	Status Atual
+
+E-mail do card (cada card tem um e-mail próprio, usaremos o Nodemailer) 
+
+Cada proposta (card) terá um campo de e-mail associado.
+	•	Este e-mail será usado para:
+	•	Envio automático de comunicações (ex: pendência, assinatura, vigência, etc.)
+	•	Envio manual de mensagens através do botão “Enviar E-mail” no card
+	•	Histórico de e-mails enviados associado diretamente à proposta (listagem dentro do próprio card)
+🔹 Lado Direito (Dinâmico): Etapas do Fluxo de Emissão
+	•	Visual da etapa atual:
+	•	Título da etapa (ex: “Verificação de Documentos”)
+	•	Campos obrigatórios para completar a etapa
+	•	Upload de documentos adicionais (se necessário)
+	•	Botão para mover para próxima etapa
+	•	Exibição de pendências ou aprovações conforme necessário.
+🧠 Importante:
+O lado esquerdo nunca muda mas é possível editar. Ele serve de apoio para tomada de decisão.
+O lado direito muda conforme o avanço da proposta. Cada etapa exige uma ação.
+Campos por Etapa Estrutura de Etapas:
+Etapa	Campos principais
+Entrada de Proposta	Check-list + Pendências
+Verificação de Documentos	Check-list + Pasta VH
+Pendências Iniciais	Documento Pendente + WhatsApp
+Inserção de Dados	Dados da Operadora + Número Pré-Proposta
+Assinatura Pendente	Datas de assinatura + Status
+Avaliação Técnica	Resultado + Prazos + Entrevista
+Pendência pela Operadora	Pendência específica + Motivo
+Pagamento ou Vigência Pendente	Vencimento Boleto + Data de Vigência
+Contrato Ativo Vigente	Data de Vigência + Observações + Pós-Venda
+
+9. E-mails (/emails)
+	•	Listagem:
+	•	Data de envio
+	•	Para (destinatário)
+	•	Assunto
+	•	Status (Enviado, Erro)
+	•	Botão:
+	•	Novo E-mail Manual
+	•	Filtros:
+	•	Buscar por E-mail do Destinatário
+	•	Buscar por Assunto
+	•	Visualização:
+	•	Abrir histórico do e-mail enviado.
+
+10. Operadoras (/operadoras)
+	•	Tabela:
+	•	Nome da Operadora
+	•	CNPJ (se aplicável)
+	•	Modalidade(s) que atende
+	•	Status (Ativa/Inativa)
+	•	Botões:
+	•	Nova Operadora
+	•	Editar Operadora
+	•	Excluir Operadora
+
+11. Administradoras (/administradoras)
+	•	Tabela:
+	•	Nome da Administradora
+	•	Tipo de Operação (Ex: Adesão, PME, PF)
+	•	Status (Ativa/Inativa)
+	•	Botões:
+	•	Nova Administradora
+	•	Editar Administradora
+	•	Excluir Administradora
+
+12. Equipes (/equipes)
+	•	Tabela:
+	•	Nome da Equipe
+	•	Supervisor da Equipe
+	•	Quantidade de Corretores
+	•	Botões:
+	•	Nova Equipe
+	•	Editar Equipe
+	•	Gerenciar Corretores da Equipe
+
+13. Corretores (/corretores)
+	•	Tabela:
+	•	Nome do Corretor
+	•	E-mail
+	•	WhatsApp
+	•	Equipe associada
+	•	Status (Ativo/Inativo)
+	•	Botões:
+	•	Novo Corretor
+	•	Editar Corretor
+	•	Ativar/Inativar Corretor
+
+14. Ajustes (/ajustes)
+	•	Seções de Configuração:
+	•	Configurações de Empresa (nome, logo, e-mails automáticos)
+	•	Integrações com APIs (n8n, WhatsApp, E-mail)
+	•	Parâmetros Operacionais (prazos, SLA, lembretes automáticos)
+	•	Gerenciar Perfis de Acesso e Permissões

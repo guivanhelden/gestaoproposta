@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Teste de Conexão</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 40px;
+            line-height: 1.6;
+        }
+        button {
+            padding: 10px 15px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 10px 0;
+        }
+        #result {
+            margin-top: 20px;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            min-height: 100px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Teste de Conexão ao Servidor</h1>
+    <p>Este arquivo testa a conexão com o servidor (via proxy na porta 3000).</p>
+    
+    <button id="testBtn">Testar Conexão</button>
+    <button id="testApiBtn">Testar Rota API</button>
+    
+    <div id="result">
+        <p>Resultado do teste aparecerá aqui...</p>
+    </div>
+
+    <script>
+        document.getElementById('testBtn').addEventListener('click', async () => {
+            const resultDiv = document.getElementById('result');
+            resultDiv.innerHTML = '<p>Testando conexão...</p>';
+            
+            try {
+                const response = await fetch('http://localhost:3000/test');
+                const data = await response.json();
+                
+                resultDiv.innerHTML = `
+                    <p style="color: green;">Conexão bem-sucedida!</p>
+                    <pre>${JSON.stringify(data, null, 2)}</pre>
+                `;
+            } catch (error) {
+                resultDiv.innerHTML = `
+                    <p style="color: red;">Erro na conexão:</p>
+                    <pre>${error.message}</pre>
+                `;
+            }
+        });
+
+        document.getElementById('testApiBtn').addEventListener('click', async () => {
+            const resultDiv = document.getElementById('result');
+            resultDiv.innerHTML = '<p>Testando rota API...</p>';
+            
+            try {
+                const response = await fetch('http://localhost:3000/api/user');
+                const status = response.status;
+                let data;
+                
+                try {
+                    data = await response.json();
+                } catch (e) {
+                    data = "Não foi possível converter a resposta para JSON";
+                }
+                
+                resultDiv.innerHTML = `
+                    <p style="color: ${status === 200 ? 'green' : 'orange'};">
+                        Status: ${status}
+                    </p>
+                    <pre>${JSON.stringify(data, null, 2)}</pre>
+                `;
+            } catch (error) {
+                resultDiv.innerHTML = `
+                    <p style="color: red;">Erro na conexão:</p>
+                    <pre>${error.message}</pre>
+                `;
+            }
+        });
+    </script>
+</body>
+</html> 
