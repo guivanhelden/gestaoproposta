@@ -7,11 +7,6 @@
 - Integrar diretamente com o Supabase, sem camadas intermediárias
 - Manter uma interface consistente entre todas as páginas
 
-## Estrutura de Arquivos
-1. Para cada entidade (ex: operadoras, corretores, equipes, administradoras):
-   - Arquivo de página principal: `/client/src/pages/[entidade].tsx`
-   - Componente de formulário: `/client/src/components/[entidade]/[entidade-singular]-form.tsx`
-
 ## Padrão de Componente de Formulário
 1. Criar interface TypeScript que reflita exatamente a estrutura da tabela no Supabase
 2. Implementar schema Zod para validação dos campos

@@ -4,6 +4,7 @@ import { FormField, FormItem, FormLabel, FormControl, FormMessage } from "@/comp
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { OperatorInfo } from "../../lib/api"; // Importar tipo
+import { Info } from "lucide-react";
 
 // Poderíamos importar ProposalFormData se precisarmos de tipos mais específicos
 // import { ProposalFormData } from "./card-modal-supabase"; 
@@ -15,13 +16,16 @@ interface ProposalGeneralInfoProps {
 
 export default function ProposalGeneralInfo({ control, operatorsList }: ProposalGeneralInfoProps) {
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Informações Gerais</CardTitle>
-      </CardHeader>
-      <CardContent>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <FormField
+    <Card className="border-none shadow-md bg-gradient-to-br from-white to-slate-50 overflow-hidden">
+    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 bg-gradient-to-r from-slate-100 to-slate-200">
+      <CardTitle className="text-lg font-semibold text-gray-700 flex items-center">
+        <Info className="mr-2 h-5 w-5 text-primary/80" />
+        Informações Gerais
+      </CardTitle>
+    </CardHeader>
+    <CardContent>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <FormField
             control={control} // Usar o controle recebido
             name="operator_id"
             render={({ field }) => (

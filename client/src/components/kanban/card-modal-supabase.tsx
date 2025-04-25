@@ -1,18 +1,38 @@
 import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { z } from "zod";
+import { z } from "zod"; 
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { 
   Trash,
   Users, 
   Phone,
-  Mail
+  Mail,
+  Clock,
+  Check,
+  X,
+  Search,
+  CalendarRange,
+  FileText,
+  User,
+  Calendar,
+  Shield,
+  FileSpreadsheet,
+  History,
+  Building2,
+  Info
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { cn } from "@/lib/utils";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Separator } from "@/components/ui/separator";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-
+import { Switch } from "@/components/ui/switch"; 
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
@@ -29,145 +49,70 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { Switch } from "@/components/ui/switch";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { IMaskInput } from 'react-imask';
 import { Skeleton } from "@/components/ui/skeleton";
 import PartnersList from "./PartnersList";
 import BeneficiariesList from "./BeneficiariesList";
 import ProposalGeneralInfo from "./ProposalGeneralInfo";
 import ProposalContractDetails from "./ProposalContractDetails";
+import CompanyDataForm from "./CompanyDataForm";
+import GracePeriodForm from "./GracePeriodForm"; // Importar novo componente
 
 import { KanbanCard } from "@/hooks/use-kanban-cards";
 import { useKanbanCards } from "@/hooks/use-kanban-cards";
-import { useToast } from "@/hooks/use-toast";
+import { useToast } from "@/hooks/use-toast"; // Ajustado para useToast do shadcn se for o caso
 import { fetchProposalDetails, fetchOperators, OperatorInfo } from "../../lib/api";
+import { proposalSchema, ProposalFormData } from "@/lib/schemas/proposalSchema"; // <-- Corrigido import e adicionado ProposalFormData
 
-// Constante para UFs
-const ufOptions = [
-  { value: "AC", label: "Acre" },
-  { value: "AL", label: "Alagoas" },
-  { value: "AP", label: "Amapá" },
-  { value: "AM", label: "Amazonas" },
-  { value: "BA", label: "Bahia" },
-  { value: "CE", label: "Ceará" },
-  { value: "DF", label: "Distrito Federal" },
-  { value: "ES", label: "Espírito Santo" },
-  { value: "GO", label: "Goiás" },
-  { value: "MA", label: "Maranhão" },
-  { value: "MT", label: "Mato Grosso" },
-  { value: "MS", label: "Mato Grosso do Sul" },
-  { value: "MG", label: "Minas Gerais" },
-  { value: "PA", label: "Pará" },
-  { value: "PB", label: "Paraíba" },
-  { value: "PR", label: "Paraná" },
-  { value: "PE", label: "Pernambuco" },
-  { value: "PI", label: "Piauí" },
-  { value: "RJ", label: "Rio de Janeiro" },
-  { value: "RN", label: "Rio Grande do Norte" },
-  { value: "RS", label: "Rio Grande do Sul" },
-  { value: "RO", label: "Rondônia" },
-  { value: "RR", label: "Roraima" },
-  { value: "SC", label: "Santa Catarina" },
-  { value: "SP", label: "São Paulo" },
-  { value: "SE", label: "Sergipe" },
-  { value: "TO", label: "Tocantins" },
-];
-
-// TODO: Definir um novo schema Zod abrangente para toda a Ficha da Proposta
-const proposalSchema = z.object({
-  // Campos iniciais da kanban_cards
-  company_name: z.string().nullable().optional(),
-  broker_name: z.string().nullable().optional(),
-  broker_phone: z.string().nullable().optional(),
-  broker_email: z.string().nullable().optional(),
-  broker_team_name: z.string().nullable().optional(),
-  operator_id: z.number().nullable().optional(),
-  operator: z.string().nullable().optional(),
-  plan_name: z.string().nullable().optional(),
-  modality: z.string().nullable().optional(),
-  lives: z.coerce.number().min(1, "Número de vidas deve ser pelo menos 1"),
-  value: z.coerce.number().min(0, "Valor deve ser maior ou igual a zero"),
-  due_date: z.string().nullable().optional(),
-  // stage_id: z.string().min(1, "Estágio é obrigatório"), // Será gerenciado na coluna direita ou de outra forma
-  observacoes: z.string().nullable().optional(),
-
-  // Campos de pme_companies
-  cnpj: z.string().nullable().optional(),
-  razao_social: z.string().nullable().optional(),
-  nome_fantasia: z.string().nullable().optional(),
-  data_abertura: z.string().nullable().optional(),
-  natureza_juridica: z.string().nullable().optional(),
-  situacao_cadastral: z.string().nullable().optional(),
-  cnae: z.string().nullable().optional(),
-  is_mei: z.boolean().nullable().optional(),
-  logradouro: z.string().nullable().optional(),
-  numero: z.string().nullable().optional(),
-  complemento: z.string().nullable().optional(),
-  bairro: z.string().nullable().optional(),
-  cep: z.string().nullable().optional(),
-  cidade: z.string().nullable().optional(),
-  uf: z.string().nullable().optional(),
-
-  // Campos de pme_contracts
-  contract_type: z.string().nullable().optional(),
-  coparticipation: z.string().nullable().optional(),
-  contract_value: z.coerce.number().nullable().optional(),
-  validity_date: z.string().nullable().optional(),
-  pre_proposta: z.string().nullable().optional(),
-  
-  // TODO: Adicionar campos para Sócios (partners), Titulares/Dependentes (holders), Carência (grace_period), Arquivos (files)
-
-  // --- Campos de pme_grace_periods ---
-  has_grace_period: z.boolean().nullable().optional(),
-  previous_operator_id: z.number().nullable().optional(),
-  grace_reason: z.string().nullable().optional(),
-});
-
-type ProposalFormData = z.infer<typeof proposalSchema>;
+// O tipo agora é importado de proposalSchema.ts
+// type ProposalFormData = z.infer<typeof proposalSchema>; 
 
 type CardModalProps = {
   isOpen: boolean;
   onClose: () => void;
-  card: KanbanCard;
-  boardId: string; // Manter boardId se necessário para contexto de exclusão/atualização
+  card: KanbanCard; 
+  boardId: string; 
 };
 
 // Função auxiliar para mapear status para variante e texto do Badge
-const getStatusBadge = (status: string | null | undefined): { variant: "default" | "secondary" | "destructive" | "outline"; text: string } => {
-  switch (status?.toLowerCase()) {
-    case 'pending':
-    case 'aguardando':
-      return { variant: "secondary", text: "Pendente" };
-    case 'approved':
-    case 'aprovado':
-    case 'active': // Considerando active como aprovado/ativo
-    case 'ativo':
-      return { variant: "default", text: "Aprovado" }; // Default é geralmente azul/primário
-    case 'rejected':
-    case 'rejeitado':
-    case 'cancelado':
-      return { variant: "destructive", text: "Rejeitado" };
-    // Adicionar outros mapeamentos conforme necessário
+const getStatusBadge = (status: string | null | undefined): { variant: "default" | "secondary" | "destructive" | "outline" | "success" | "warning"; text: string; icon?: any } => {
+  if (!status) {
+    return { variant: "outline", text: "Pendente", icon: "clock" };
+  }
+
+  switch (status.toLowerCase()) {
+    case "aprovado":
+    case "approved":
+      return { variant: "success", text: "Aprovado", icon: "check" };
+    case "recusado":
+    case "rejected":
+    case "declined":  
+      return { variant: "destructive", text: "Recusado", icon: "x" };
+    case "pendente":
+    case "pending":
+      return { variant: "warning", text: "Pendente", icon: "clock" };
+    case "em análise":
+    case "analyzing":
+      return { variant: "secondary", text: "Em Análise", icon: "search" };
     default:
-      return { variant: "outline", text: status || "Indefinido" };
+      return { variant: "secondary", text: status };
   }
 };
 
-export default function CardModalSupabase({ isOpen, onClose, card, boardId }: CardModalProps) {
+export default function CardModalSupabase({ isOpen, onClose, card, boardId }: CardModalProps) { 
   const { toast } = useToast();
+  const { updateCard, deleteCard } = useKanbanCards(boardId);
+
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [proposalDetails, setProposalDetails] = useState<any>(null); // Manter como 'any' por enquanto ou criar tipo detalhado
   const [isLoading, setIsLoading] = useState(true);
   const [operatorsList, setOperatorsList] = useState<OperatorInfo[]>([]); // Estado para lista de operadoras
-  
-  const { updateCard, deleteCard } = useKanbanCards(boardId);
+  const [isSearchingCnpj, setIsSearchingCnpj] = useState(false); // <-- Adicionado estado
 
   // Mover a declaração do formulário para ANTES do useEffect
   const form = useForm<ProposalFormData>({
     resolver: zodResolver(proposalSchema),
     defaultValues: { 
-        company_name: "",
+        company_name: card.company_name || "",
         broker_name: null,
         broker_phone: null,
         broker_email: null,
@@ -176,10 +121,12 @@ export default function CardModalSupabase({ isOpen, onClose, card, boardId }: Ca
         operator: card.operator || "",
         plan_name: null,
         modality: null,
-        lives: 1,
-        value: 0,
-        due_date: null,
-        observacoes: "",
+        lives: card.lives, 
+        value: card.value ?? 0, // Garantir fallback 0
+        due_date: card.due_date || null, 
+        observacoes: card.observacoes || "", 
+
+        // Dados básicos da empresa
         cnpj: null,
         razao_social: null,
         nome_fantasia: null,
@@ -187,21 +134,24 @@ export default function CardModalSupabase({ isOpen, onClose, card, boardId }: Ca
         natureza_juridica: null,
         situacao_cadastral: null,
         cnae: null,
+        cnae_descricao: null,
         is_mei: false,
+        
+        // Dados de endereço
+        tipo_logradouro: null,
         logradouro: null,
         numero: null,
         complemento: null,
         bairro: null,
-        cep: null,
         cidade: null,
         uf: null,
+        cep: null,
+
         contract_type: null,
         coparticipation: null,
-        contract_value: null,
         validity_date: null,
         pre_proposta: null,
         has_grace_period: false,
-        previous_operator_id: null,
         grace_reason: null,
     }
   });
@@ -244,13 +194,13 @@ export default function CardModalSupabase({ isOpen, onClose, card, boardId }: Ca
   // Efeito para buscar dados detalhados
   useEffect(() => {
     const loadDetails = async () => {
-      if (isOpen && card.submission_id) {
+      if (isOpen && card.submission_id) { 
         setIsLoading(true);
         setProposalDetails(null);
         form.reset();
         try {
-          console.log(`Iniciando busca para submission_id: ${card.submission_id}`);
-          const data = await fetchProposalDetails(card.submission_id);
+          console.log(`Iniciando busca para submission_id: ${card.submission_id}`); 
+          const data = await fetchProposalDetails(card.submission_id); 
           console.log("Detalhes recebidos no componente:", data);
 
           if (!data) {
@@ -262,54 +212,55 @@ export default function CardModalSupabase({ isOpen, onClose, card, boardId }: Ca
           setProposalDetails(data);
 
           form.reset({
-            company_name: card.company_name || data.company?.nome_fantasia || "",
+            company_name: card.company_name || data.company?.nome_fantasia || "", 
             broker_name: data.submission?.broker_name || null,
             broker_phone: data.submission?.broker_phone || null,
             broker_email: data.submission?.broker_email || null,
             broker_team_name: data.submission?.broker_team_name || null,
             operator_id: data.submission?.operator_id || null,
-            operator: data.submission?.operator_name || card.operator || null,
+            operator: data.submission?.operator_name || card.operator || null, 
             plan_name: data.submission?.plan_name || null,
             modality: data.submission?.modality || null,
-            lives: card.lives,
-            value: data.contract?.value ?? card.value ?? null,
-            due_date: data.contract?.validity_date || card.due_date || null,
-            observacoes: card.observacoes || data.grace_period?.reason || "",
+            lives: card.lives, 
+            value: data.contract?.value ?? card.value ?? 0, // Garantir fallback 0
+            due_date: data.contract?.validity_date || card.due_date || null, 
+            observacoes: card.observacoes || data.grace_period?.reason || "", 
 
+            // Dados básicos da empresa
             cnpj: data.company?.cnpj || null,
             razao_social: data.company?.razao_social || null,
-            nome_fantasia: data.company?.nome_fantasia || card.company_name || null,
+            nome_fantasia: data.company?.nome_fantasia || card.company_name || null, 
             data_abertura: data.company?.data_abertura || null,
             natureza_juridica: data.company?.natureza_juridica_nome || data.company?.natureza_juridica || null,
             situacao_cadastral: data.company?.situacao_cadastral || null,
-            cnae: data.company?.cnae_descricao || data.company?.cnae || null,
-            is_mei: data.company?.is_mei ?? false,
+            cnae: data.company?.cnae || null,
+            cnae_descricao: data.company?.cnae_descricao || null,
+            is_mei: data.company?.is_mei || false,
+            
+            // Dados de endereço da empresa
+            tipo_logradouro: data.company?.tipo_logradouro || null,
             logradouro: data.company?.logradouro || null,
             numero: data.company?.numero || null,
             complemento: data.company?.complemento || null,
             bairro: data.company?.bairro || null,
-            cep: data.company?.cep || null,
             cidade: data.company?.cidade || null,
             uf: data.company?.uf || null,
+            cep: data.company?.cep || null,
 
             contract_type: data.contract?.type || null,
             coparticipation: data.contract?.coparticipation || null,
-            contract_value: data.contract?.value ?? card.value ?? null,
-            validity_date: data.contract?.validity_date || card.due_date || null,
+            validity_date: data.contract?.validity_date || card.due_date || null, 
             pre_proposta: data.contract?.pre_proposta || null,
 
             has_grace_period: data.grace_period?.has_grace_period ?? false,
-            previous_operator_id: data.grace_period?.previous_operator_id || null,
-            grace_reason: data.grace_period?.reason || null,
+            grace_reason: data.grace_period?.reason || null
           });
 
-          console.log("Formulário resetado com os dados:", form.getValues());
-
-        } catch (error: any) {
-          console.error("Erro ao buscar detalhes da proposta no useEffect:", error);
+        } catch (error) {
+          console.error("Erro ao buscar detalhes da proposta:", error);
           toast({
-            title: "Erro ao carregar detalhes",
-            description: error.message || "Não foi possível buscar os dados completos da proposta.",
+            title: "Erro ao carregar dados",
+            description: "Não foi possível buscar os detalhes da proposta. Tente novamente.",
             variant: "destructive"
           });
           form.reset({ 
@@ -317,64 +268,43 @@ export default function CardModalSupabase({ isOpen, onClose, card, boardId }: Ca
             operator_id: null,
             operator: card.operator || "",
       lives: card.lives,
-      value: card.value,
+      value: card.value ?? 0, // Garantir fallback 0
             due_date: card.due_date || null,
             observacoes: card.observacoes || "",
           });
         } finally {
           setIsLoading(false);
         }
-      } else if (!isOpen) {
-        setProposalDetails(null);
-        form.reset();
-        setIsLoading(false);
       }
     };
 
     loadDetails();
 
-  }, [isOpen, card.submission_id, card, form, toast]);
+  }, [isOpen, card.submission_id, card, form, toast]); 
 
   // TODO: Implementar função para salvar TODAS as alterações da Ficha
   const onSubmit = (data: ProposalFormData) => {
-    console.log("Dados do formulário para salvar:", data);
-    // Aqui virá a lógica para chamar as funções de update nas tabelas necessárias
-    // Ex: updateSubmissionDetails(card.submission_id, { operator_id: data.operator_id, ... });
-    // Ex: updateCompanyDetails(card.submission_id, data);
-    // Ex: updateContractDetails(card.submission_id, data);
-    // ... etc ...
+    console.log("Dados do formulário para submissão:", data);
     
-    // Exemplo de atualização básica do card (campos que existem na kanban_cards)
-    updateCard({
-      id: card.id,
+    updateCard({ 
+      id: card.id, 
       company_name: data.company_name,
-      // operator: data.operator, // Poderia atualizar o nome aqui se necessário
-      // operator_id: data.operator_id, // REMOVIDO: Este campo não existe em kanban_cards
-      lives: data.lives,
-      value: data.value,
-      due_date: data.due_date || null, 
-      observacoes: data.observacoes,
     }, {
       onSuccess: () => {
-        toast({
-          title: "Alterações salvas (Parcial)", // Avisar que é parcial
-          description: "Apenas campos do card foram atualizados."
-        });
+        toast({ title: "Cartão atualizado com sucesso!" });
       },
-      onError: (error: Error) => {
-        toast({
-          title: "Erro ao salvar campos do card",
-          description: error.message,
-          variant: "destructive"
-        });
+      onError: (error) => {
+        toast({ title: "Erro ao atualizar cartão", description: error.message, variant: "destructive" });
       }
     });
+
+    onClose();
   };
 
   // Função para excluir o cartão (mantida)
   const handleDelete = () => {
-     setIsDeleteDialogOpen(false); // Fechar diálogo de confirmação primeiro
-    deleteCard(card.id, {
+      setIsDeleteDialogOpen(false); 
+    deleteCard(card.id, { 
       onSuccess: () => {
         toast({
           title: "Cartão excluído",
@@ -396,6 +326,22 @@ export default function CardModalSupabase({ isOpen, onClose, card, boardId }: Ca
   const currentStatus = proposalDetails?.submission?.status;
   const statusBadgeInfo = getStatusBadge(currentStatus);
 
+  // Placeholder para busca CNPJ
+  const handleCnpjSearch = async (cnpj: string) => {
+    console.log("Buscando CNPJ:", cnpj);
+    setIsSearchingCnpj(true);
+    // TODO: Implementar chamada à API para buscar dados do CNPJ
+    // Exemplo: const companyData = await fetchCompanyData(cnpj);
+    // if (companyData) {
+    //   form.setValue('razao_social', companyData.razao_social);
+    //   form.setValue('nome_fantasia', companyData.nome_fantasia);
+    //   ...
+    // }
+    await new Promise(resolve => setTimeout(resolve, 1500)); // Simular delay da API
+    toast({ title: "Busca CNPJ", description: "Funcionalidade ainda não implementada." });
+    setIsSearchingCnpj(false);
+  };
+
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
       {/* Aumentar largura máxima e garantir scroll */}
@@ -404,47 +350,94 @@ export default function CardModalSupabase({ isOpen, onClose, card, boardId }: Ca
           <div className="flex justify-between items-start">
             {/* Agrupar Título e Info Corretor */} 
             <div className="flex flex-col gap-1">
-               {/* Linha Empresa + Status Badge */} 
-               <div className="flex items-center gap-2">
-                  <DialogTitle className="text-xl font-bold m-0 p-0">
-                     {form.watch("company_name") || card.company_name || "Detalhes da Proposta"}
-            </DialogTitle>
-                  <Badge variant={statusBadgeInfo.variant}>{statusBadgeInfo.text}</Badge>
-               </div>
-              
-               {/* Info Corretor com Ícones */} 
-               <div className="text-xs text-muted-foreground flex flex-wrap items-center gap-x-3 gap-y-1">
-                  {/* Corretor */} 
-                  <span>
-                     <span className="font-semibold">Corretor:</span> {form.watch("broker_name") || "-"}
-                  </span>
-                  {/* Equipe */} 
-                  {form.watch("broker_team_name") && (
-                    <span className="flex items-center gap-1">
-                      <Users className="h-3 w-3" />
-                      {form.watch("broker_team_name")}
-                    </span>
-                  )}
-                  {/* Telefone */} 
-                  {form.watch("broker_phone") && (
-                    <span className="flex items-center gap-1">
-                      <Phone className="h-3 w-3" />
-                      {/* TODO: Formatar/mascarar telefone */} 
-                      {form.watch("broker_phone")}
-                    </span>
-                  )}
-                  {/* Email */} 
-                  {form.watch("broker_email") && (
-                    <span className="flex items-center gap-1">
-                      <Mail className="h-3 w-3" />
-                      {form.watch("broker_email")}
-                    </span>
-                  )}
-               </div>
+               {/* Linha Empresa + Status Badge */}                <div className="flex items-center gap-3">
+                   <DialogTitle className="text-xl font-bold m-0 p-0">
+                      {form.watch("company_name") || card.company_name || "Detalhes da Proposta"} 
+                   </DialogTitle>
+                   <Badge 
+                     className={cn(
+                       "py-1.5 px-3 flex items-center gap-1 text-xs font-medium",
+                       statusBadgeInfo.variant === "success" && "bg-emerald-100 text-emerald-700 hover:bg-emerald-200",
+                       statusBadgeInfo.variant === "warning" && "bg-amber-100 text-amber-700 hover:bg-amber-200",
+                       statusBadgeInfo.variant === "destructive" && "bg-rose-100 text-rose-700 hover:bg-rose-200"
+                     )}
+                   >
+                     {statusBadgeInfo.icon === "check" && <Check className="h-3.5 w-3.5" />}
+                     {statusBadgeInfo.icon === "x" && <X className="h-3.5 w-3.5" />}
+                     {statusBadgeInfo.icon === "clock" && <Clock className="h-3.5 w-3.5" />}
+                     {statusBadgeInfo.icon === "search" && <Search className="h-3.5 w-3.5" />}
+                     {statusBadgeInfo.text}
+                   </Badge>
+                </div>
+                             {/* Info Corretor com Ícones */ }
+                <div className="flex flex-wrap items-center gap-4 mt-2 bg-muted/40 rounded-md p-2">
+                  <div className="flex items-center gap-2">
+                    <Avatar className="h-8 w-8">
+                      <AvatarImage src="" />
+                      <AvatarFallback className="bg-primary/10 text-primary">
+                        {form.watch("broker_name")?.substring(0, 2) || 'BR'}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div className="flex flex-col">
+                      <span className="text-sm font-medium">{form.watch("broker_name") || "-"}</span>
+                      <span className="text-xs text-muted-foreground">Corretor</span>
+                    </div>
+                  </div>
+
+                  <Separator orientation="vertical" className="h-8" />
+                  
+                  <div className="flex flex-wrap gap-3">
+                    {form.watch("broker_team_name") && (
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <span className="flex items-center gap-1.5 rounded-full bg-muted px-2 py-1 text-xs">
+                              <Users className="h-3 w-3" />
+                              {form.watch("broker_team_name")}
+                            </span>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p>Equipe do corretor</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                    )}
+                    {form.watch("broker_phone") && (
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <span className="flex items-center gap-1.5 rounded-full bg-muted px-2 py-1 text-xs">
+                              <Phone className="h-3 w-3" />
+                              {form.watch("broker_phone")}
+                            </span>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p>Telefone do corretor</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                    )}
+                    {form.watch("broker_email") && (
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <span className="flex items-center gap-1.5 rounded-full bg-muted px-2 py-1 text-xs truncate max-w-[180px]">
+                              <Mail className="h-3 w-3 flex-shrink-0" />
+                              <span className="truncate">{form.watch("broker_email")}</span>
+                            </span>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p>{form.watch("broker_email")}</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                    )}
+                  </div>
+                </div>
             </div>
             
             {/* Botões de Ação */} 
-            <div className="flex gap-2 flex-shrink-0">
+            <div className="flex gap-2 flex-shrink-0 ml-auto">
                {/* Botão Excluir Mantido */}
               <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
                 <AlertDialogTrigger asChild>
@@ -467,7 +460,7 @@ export default function CardModalSupabase({ isOpen, onClose, card, boardId }: Ca
                 </AlertDialogContent>
               </AlertDialog>
                 {/* Botão Salvar */} 
-                <Button size="sm" onClick={form.handleSubmit(onSubmit)} disabled={isLoading}>
+                <Button size="sm" onClick={form.handleSubmit(onSubmit)} disabled={isLoading} className="bg-gradient-to-r from-primary to-primary-dark hover:from-primary-dark hover:to-primary-dark hover:translate-y-[-1px] transition-all duration-200 hover:shadow-md">
                    Salvar Alterações
                 </Button>
             </div>
@@ -511,269 +504,34 @@ export default function CardModalSupabase({ isOpen, onClose, card, boardId }: Ca
           <Form {...form}>
                 <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
                   
-                  {/* === Seção Informações Gerais === */} 
+                  {/* === Seção Informações Gerais === */}
                   <ProposalGeneralInfo control={form.control} operatorsList={operatorsList} />
 
-                  {/* === Seção Dados da Empresa === */} 
-                  <Card>
-                     <CardHeader>
-                       <CardTitle>Dados da Empresa</CardTitle>
-                     </CardHeader>
-                     <CardContent className="space-y-4">
-                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                         <FormField
-                           control={form.control}
-                           name="cnpj"
-                           render={({ field }) => (
-                             <FormItem>
-                               <FormLabel>CNPJ</FormLabel>
-                               <FormControl>
-                                 <IMaskInput
-                                   mask="00.000.000/0000-00"
-                                   unmask={true} // Para salvar apenas os números
-                                   value={field.value || ''}
-                                   onAccept={(value: any) => field.onChange(value)} // Atualizar form com valor não mascarado
-                                   placeholder="00.000.000/0000-00"
-                                   // Encaminhar ref e aplicar estilo do Input do Shadcn
-                                   inputRef={field.ref as any}
-                                   className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                                 />
-                               </FormControl>
-                               <FormMessage />
-                             </FormItem>
-                           )}
-                         />
-                              <FormField
-                               control={form.control}
-                               name="razao_social"
-                               render={({ field }) => (
-                                 <FormItem>
-                                   <FormLabel>Razão Social</FormLabel>
-                                   <FormControl>
-                                     <Input {...field} placeholder="Razão Social da Empresa" value={field.value || ''} />
-                                   </FormControl>
-                                   <FormMessage />
-                                 </FormItem>
-                               )}
-                             />
-                              <FormField
-                               control={form.control}
-                               name="nome_fantasia"
-                               render={({ field }) => (
-                                 <FormItem>
-                                   <FormLabel>Nome Fantasia</FormLabel>
-                                   <FormControl>
-                                     <Input {...field} placeholder="Nome Fantasia da Empresa" value={field.value || ''} />
-                                   </FormControl>
-                                   <FormMessage />
-                                 </FormItem>
-                               )}
-                             />
-                            <FormField
-                              control={form.control}
-                              name="data_abertura"
-                              render={({ field }) => (
-                                <FormItem>
-                                  <FormLabel>Data de Abertura</FormLabel>
-                                  <FormControl>
-                                    <Input type="date" {...field} value={field.value || ''} />
-                                  </FormControl>
-                                  <FormMessage />
-                                </FormItem>
-                              )}
-                            />
-                            <FormField
-                              control={form.control}
-                              name="natureza_juridica"
-                              render={({ field }) => (
-                                <FormItem>
-                                  <FormLabel>Natureza Jurídica</FormLabel>
-                                  <FormControl>
-                                    <Input {...field} placeholder="Ex: LTDA, SA" value={field.value || ''} readOnly />
-                                  </FormControl>
-                                  <FormMessage />
-                                </FormItem>
-                              )}
-                            />
-                             <FormField
-                              control={form.control}
-                              name="situacao_cadastral"
-                              render={({ field }) => (
-                                <FormItem>
-                                  <FormLabel>Situação Cadastral</FormLabel>
-                                  <FormControl>
-                                    <Input {...field} placeholder="Ex: Ativa" value={field.value || ''} readOnly />
-                                  </FormControl>
-                                  <FormMessage />
-                                </FormItem>
-                              )}
-                            />
-                            <FormField
-                              control={form.control}
-                              name="cnae"
-                              render={({ field }) => (
-                                <FormItem className="sm:col-span-2">
-                                  <FormLabel>CNAE Principal</FormLabel>
-                                  <FormControl>
-                                    <Input {...field} placeholder="Código e Descrição" value={field.value || ''} readOnly />
-                                  </FormControl>
-                                  <FormMessage />
-                                </FormItem>
-                              )}
-                            />
-                            <FormField
-                                control={form.control}
-                                name="is_mei"
-                                render={({ field }) => (
-                                  <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm sm:col-span-2">
-                                    <div className="space-y-0.5">
-                                      <FormLabel>Empresa é MEI?</FormLabel>
-                                    </div>
-                                    <FormControl>
-                                      <Switch
-                                        checked={field.value ?? false}
-                                        onCheckedChange={field.onChange}
-                                      />
-                                    </FormControl>
-                                  </FormItem>
-                                )}
-                              />
-                       </div>
-                       {/* Endereço */}
-                       <h4 className="text-md font-semibold pt-4 border-t">Endereço</h4>
-                       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                         <FormField
-                           control={form.control}
-                           name="cep"
-                           render={({ field }) => (
-                             <FormItem className="sm:col-span-1">
-                               <FormLabel>CEP</FormLabel>
-                               <FormControl>
-                                 <IMaskInput
-                                   mask="00000-000"
-                                   unmask={true} // Salvar apenas números?
-                                   value={field.value || ''}
-                                   onAccept={(value: any) => field.onChange(value)}
-                                   placeholder="00000-000"
-                                   inputRef={field.ref as any}
-                                   // Aplicar estilo do Input
-                                   className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                                   // TODO: Adicionar onBlur ou onComplete para buscar endereço?
-                                 />
-                               </FormControl>
-                               <FormMessage />
-                             </FormItem>
-                           )}
-                         />
-                              <FormField
-                               control={form.control}
-                               name="logradouro"
-                               render={({ field }) => (
-                                 <FormItem className="sm:col-span-2">
-                                   <FormLabel>Logradouro</FormLabel>
-                                   <FormControl>
-                                     <Input {...field} placeholder="Rua, Avenida..." value={field.value || ''} />
-                                   </FormControl>
-                                   <FormMessage />
-                                 </FormItem>
-                               )}
-                             />
-                             <FormField
-                               control={form.control}
-                               name="numero"
-                               render={({ field }) => (
-                                 <FormItem className="sm:col-span-1">
-                                   <FormLabel>Número</FormLabel>
-                                   <FormControl>
-                                     <Input {...field} placeholder="Nº" value={field.value || ''} />
-                                   </FormControl>
-                                   <FormMessage />
-                                 </FormItem>
-                               )}
-                             />
-                             <FormField
-                               control={form.control}
-                               name="complemento"
-                               render={({ field }) => (
-                                 <FormItem className="sm:col-span-2">
-                                   <FormLabel>Complemento</FormLabel>
-                                   <FormControl>
-                                     <Input {...field} placeholder="Apto, Bloco, Sala..." value={field.value || ''} />
-                                   </FormControl>
-                                   <FormMessage />
-                                 </FormItem>
-                               )}
-                             />
-                              <FormField
-                               control={form.control}
-                               name="bairro"
-                               render={({ field }) => (
-                                 <FormItem className="sm:col-span-1">
-                                   <FormLabel>Bairro</FormLabel>
-                                   <FormControl>
-                                     <Input {...field} placeholder="Bairro" value={field.value || ''} />
-                                   </FormControl>
-                                   <FormMessage />
-                                 </FormItem>
-                               )}
-                             />
-                             <FormField
-                               control={form.control}
-                               name="cidade"
-                               render={({ field }) => (
-                                 <FormItem className="sm:col-span-1">
-                                   <FormLabel>Cidade</FormLabel>
-                                   <FormControl>
-                                     <Input {...field} placeholder="Cidade" value={field.value || ''} />
-                                   </FormControl>
-                                   <FormMessage />
-                                 </FormItem>
-                               )}
-                             />
-                              <FormField
-                               control={form.control}
-                               name="uf"
-                               render={({ field }) => (
-                                 <FormItem className="sm:col-span-1">
-                                   <FormLabel>UF</FormLabel>
-                                   <Select onValueChange={field.onChange} value={field.value || ""}>
-                                     <FormControl>
-                                       <SelectTrigger>
-                                         <SelectValue placeholder="Selecione" />
-                                       </SelectTrigger>
-                                     </FormControl>
-                                     <SelectContent>
-                                       {ufOptions.map((option) => (
-                                         <SelectItem key={option.value} value={option.value}>
-                                           {option.label} ({option.value})
-                                         </SelectItem>
-                                       ))}
-                                     </SelectContent>
-                                   </Select>
-                                   <FormMessage />
-                                 </FormItem>
-                               )}
-                             />
-                       </div>
-                     </CardContent>
-                  </Card>
+                  {/* === Seção Dados da Empresa === */}
+                  <CompanyDataForm control={form.control} onCnpjSearch={handleCnpjSearch} isSearchingCnpj={isSearchingCnpj} />
 
                   {/* === Seção Sócios === */}
-                  <Card>
-                    <CardHeader>
-                      <CardTitle>Sócios</CardTitle>
-                    </CardHeader>
-                    <CardContent>
+                  <Card className="border-none shadow-md bg-gradient-to-br from-white to-slate-50 overflow-hidden">
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 bg-gradient-to-r from-slate-100 to-slate-200">
+                       <CardTitle className="text-lg font-semibold text-gray-700 flex items-center">
+                         <Users className="mr-2 h-5 w-5 text-primary/80" />
+                         Sócios
+                       </CardTitle>
+                     </CardHeader>
+                    <CardContent className="p-6 space-y-4">
                       <PartnersList partners={proposalDetails?.partners} />
                     </CardContent>
                   </Card>
 
                   {/* === Seção Beneficiários === */}
-                  <Card>
-                    <CardHeader>
-                      <CardTitle>Beneficiários</CardTitle>
-                    </CardHeader>
-                    <CardContent>
+                  <Card className="border-none shadow-md bg-gradient-to-br from-white to-slate-50 overflow-hidden">
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 bg-gradient-to-r from-slate-100 to-slate-200">
+                       <CardTitle className="text-lg font-semibold text-gray-700 flex items-center">
+                         <User className="mr-2 h-5 w-5 text-primary/80" />
+                         Beneficiários
+                       </CardTitle>
+                     </CardHeader>
+                    <CardContent className="p-6 space-y-4">
                       <BeneficiariesList holders={proposalDetails?.holders} />
                     </CardContent>
                   </Card>
@@ -782,107 +540,52 @@ export default function CardModalSupabase({ isOpen, onClose, card, boardId }: Ca
                   <ProposalContractDetails control={form.control} />
 
                   {/* === Seção Carência === */} 
-                  <Card>
-                    <CardHeader>
-                      <CardTitle>Carência</CardTitle>
-                    </CardHeader>
-                    <CardContent className="space-y-4">
-                       <FormField
-                         control={form.control}
-                         name="has_grace_period"
-                         render={({ field }) => (
-                           <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm">
-                             <div className="space-y-0.5">
-                               <FormLabel>Aproveitamento de Carência?</FormLabel>
-                             </div>
-                             <FormControl>
-                               <Switch
-                                 checked={field.value ?? false}
-                                 onCheckedChange={field.onChange}
-                               />
-                             </FormControl>
-                           </FormItem>
-                         )}
-                       />
-                       {form.watch('has_grace_period') && (
-                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-4 border-t">
-              <FormField
-                control={form.control}
-                             name="previous_operator_id"
-                render={({ field }) => (
-                  <FormItem>
-                                 <FormLabel>Operadora Anterior</FormLabel>
-                    <Select
-                                   onValueChange={(value) => field.onChange(value ? parseInt(value, 10) : null)} 
-                                   value={String(field.value ?? "")} // Convert number ID to string
-                    >
-                      <FormControl>
-                        <SelectTrigger>
-                                       <SelectValue placeholder="Selecione" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                                     {operatorsList.map((op) => (
-                                       <SelectItem key={op.id} value={String(op.id)}> {/* Use string ID */}
-                                         {op.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-                            <FormField
-                              control={form.control}
-                              name="grace_reason"
-                              render={({ field }) => (
-                                <FormItem>
-                                  <FormLabel>Observações da Carência</FormLabel>
-                                  <FormControl>
-                                    <Textarea {...field} placeholder="Motivo, documentos enviados..." value={field.value || ''} />
-                                  </FormControl>
-                                  <FormMessage />
-                                </FormItem>
-                              )}
-                            />
-                         </div>
-                       )}
-                    </CardContent>
-                  </Card>
+                  <GracePeriodForm control={form.control} operatorsList={operatorsList} />
 
                   {/* === Seção Observações Gerais === */} 
-                  <Card>
-                    <CardHeader>
-                      <CardTitle>Observações Gerais</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-              <FormField
-                control={form.control}
-                name="observacoes"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormControl>
-                              <Textarea rows={4} {...field} placeholder="Anotações gerais sobre a proposta..." value={field.value || ''} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+                  <Card className="border-none shadow-md bg-gradient-to-br from-white to-slate-50 overflow-hidden">
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 bg-gradient-to-r from-slate-100 to-slate-200">
+                       <CardTitle className="text-lg font-semibold text-gray-700 flex items-center">
+                         <FileText className="mr-2 h-5 w-5 text-primary/80" />
+                         Observações Gerais
+                       </CardTitle>
+                     </CardHeader>
+                    <CardContent className="p-6 space-y-4">
+                      <FormField
+                        control={form.control}
+                        name="observacoes"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormControl>
+                              <Textarea 
+                              rows={4} 
+                              {...field} 
+                              placeholder="Anotações gerais sobre a proposta..." 
+                              value={field.value || ''}
+                              className="min-h-[120px] resize-none transition-all duration-200 focus-visible:ring-primary/80 focus-visible:border-primary/50" 
+                            />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
                     </CardContent>
                   </Card>
 
                   {/* === Seção Histórico === */} 
-                  <Card>
-                    <CardHeader>
-                      <CardTitle>Histórico</CardTitle>
+                  <Card className="border-none shadow-md bg-gradient-to-br from-white to-slate-50 overflow-hidden">
+                    <CardHeader className="border-b bg-muted/30 pb-3">
+                      <CardTitle className="flex items-center gap-2 text-base">
+                        <History className="h-4 w-4 text-muted-foreground" />
+                        Histórico
+                      </CardTitle>
                     </CardHeader>
                     <CardContent>
                       <div className="text-sm text-muted-foreground space-y-1">
-                        <p>Criado em: {card.created_at ? formatDate(card.created_at) : 'N/A'}</p>
-                        {/* TODO: Buscar nome do usuário a partir de card.created_by */}
+                        <p>Criado em: {card.created_at ? formatDate(card.created_at) : 'N/A'}</p> 
+                        
                         <p>Criado por: {card.created_by || 'N/A'}</p> 
-                        <p>Última Atualização: {card.updated_at ? formatDate(card.updated_at) : 'N/A'}</p>
+                        <p>Última Atualização: {card.updated_at ? formatDate(card.updated_at) : 'N/A'}</p> 
                       </div>
                     </CardContent>
                   </Card>
@@ -893,9 +596,18 @@ export default function CardModalSupabase({ isOpen, onClose, card, boardId }: Ca
               </div>
               
           {/* Coluna Direita: Etapa Atual do Fluxo (Placeholder) */}
-          <div className="md:col-span-1 p-4 bg-muted rounded-md h-fit sticky top-4">
-            <h3 className="font-semibold mb-4">Etapa Atual</h3>
-            <p className="text-sm text-muted-foreground"> (Conteúdo da etapa atual será exibido aqui)</p>
+          <div className="md:col-span-1 p-4 bg-gradient-to-b from-muted to-background rounded-md border shadow-sm h-fit sticky top-4">
+            <h3 className="font-semibold mb-4 flex items-center gap-2">
+              <FileSpreadsheet className="h-4 w-4 text-primary" />
+              Etapa Atual
+            </h3>
+            <div className="space-y-3">
+              <Card className="bg-card/50 border-dashed">
+                <CardContent className="p-3 text-sm text-muted-foreground">
+                  (Conteúdo da etapa atual será exibido aqui)
+                </CardContent>
+              </Card>
+            </div>
                 </div>
             
               </div>
