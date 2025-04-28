@@ -58,7 +58,7 @@ interface BeneficiariesListProps {
   onDeleteHolder?: (holderId: string) => void;
   onAddDependent?: (holderId: string) => void;
   onEditDependent?: (dependent: PmeDependent) => void;
-  onDeleteDependent?: (dependentId: string) => void;
+  onDeleteDependent?: (dependentId: string, holderId?: string) => void;
   isLoading?: boolean;
 }
 
@@ -248,7 +248,7 @@ export default function BeneficiariesList({
                                   variant="ghost" 
                                   size="icon" 
                                   className="h-6 w-6 text-destructive hover:text-destructive"
-                                  onClick={() => onDeleteDependent?.(dep.id)}
+                                  onClick={() => onDeleteDependent?.(dep.id, holder.id)}
                                   disabled={isLoading}
                                   title="Excluir Dependente"
                                 >

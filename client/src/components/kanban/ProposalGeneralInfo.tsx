@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { OperatorInfo } from "../../lib/api"; // Importar tipo
 import { Info } from "lucide-react";
+import { DatePicker } from "@/components/ui/date-picker";
 
 // Poderíamos importar ProposalFormData se precisarmos de tipos mais específicos
 // import { ProposalFormData } from "./card-modal-supabase"; 
@@ -30,7 +31,9 @@ export default function ProposalGeneralInfo({ control, operatorsList }: Proposal
             name="operator_id"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Operadora</FormLabel>
+                <FormLabel className="flex">
+                  Operadora <span className="text-destructive ml-1">*</span>
+                </FormLabel>
                 <Select
                   onValueChange={(value) => field.onChange(value ? parseInt(value, 10) : null)}
                   value={String(field.value ?? "")}
@@ -80,46 +83,17 @@ export default function ProposalGeneralInfo({ control, operatorsList }: Proposal
           />
           <FormField
             control={control}
-            name="lives"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Vidas</FormLabel>
-                <FormControl>
-                  {/* TODO: Considerar tipo number no schema Zod se não for coerce */}
-                  <Input type="number" {...field} placeholder="Nº de Vidas" 
-                    value={field.value ?? 0} // Handle potential null/undefined for number
-                    onChange={e => field.onChange(parseInt(e.target.value, 10) || 0)} // Ensure number 
-                  />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-          <FormField
-            control={control}
-            name="value"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Valor (Mensal)</FormLabel>
-                <FormControl>
-                   {/* TODO: Input de Moeda */}
-                  <Input type="number" step="0.01" {...field} placeholder="0,00" 
-                     value={field.value ?? 0} 
-                     onChange={e => field.onChange(parseFloat(e.target.value) || 0)} // Ensure number
-                   />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-          <FormField
-            control={control}
             name="due_date"
             render={({ field }) => (
               <FormItem>
                 <FormLabel>Vigência</FormLabel>
                 <FormControl>
-                  <Input type="date" {...field} value={field.value || ''} />
+                  <DatePicker 
+                    value={field.value}
+                    onChange={field.onChange}
+                    placeholder="Selecione a data de vigência"
+                    disabled={field.disabled}
+                  />
                 </FormControl>
                 <FormMessage />
               </FormItem>

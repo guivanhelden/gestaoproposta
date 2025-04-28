@@ -7,7 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { Shield } from "lucide-react";
 import { OperatorInfo } from "@/lib/api"; // Importar tipo
-import { Calendar } from 'lucide-react';
+import { Calendar as CalendarIcon } from 'lucide-react';
 
 interface GracePeriodFormProps {
   control: Control<any>; // Receber o controle do formulário pai
@@ -25,7 +25,7 @@ export default function GracePeriodForm({ control, operatorsList }: GracePeriodF
     <Card className="border-none shadow-md bg-gradient-to-br from-white to-slate-50 overflow-hidden">
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 bg-gradient-to-r from-slate-100 to-slate-200">
         <CardTitle className="text-lg font-semibold text-gray-700 flex items-center">
-          <Calendar className="mr-2 h-5 w-5 text-primary/80" />
+          <CalendarIcon className="mr-2 h-5 w-5 text-primary/80" />
           Carência
         </CardTitle>
       </CardHeader>

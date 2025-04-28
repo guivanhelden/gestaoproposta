@@ -2,7 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 
 import { fetchStageFieldsAndData, StageFieldWithValue, upsertKanbanStageData, UpsertStageData } from '@/lib/api';
 import { Skeleton } from "@/components/ui/skeleton";
@@ -22,6 +22,7 @@ import { Calendar } from "@/components/ui/calendar";
 import { CalendarIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from '@/hooks/use-auth';
+import { DatePicker } from "@/components/ui/date-picker";
 
 type StageDataDisplayProps = {
   cardId: string;
@@ -353,42 +354,22 @@ export default function StageDataDisplay({ cardId, stageId }: StageDataDisplayPr
               case 'textarea':
                  return <Textarea {...commonProps} value={String(field.value ?? '')} onChange={field.onChange} className="h-20 resize-none" />;
               case 'date':
-                let selectedDate: Date | undefined = undefined;
-                if (field.value && typeof field.value === 'string') {
-                    try {
-                        selectedDate = parse(field.value, 'yyyy-MM-dd', new Date());
-                         if (isNaN(selectedDate.getTime())) {
-                           selectedDate = new Date(field.value);
-                         } 
-                         if (isNaN(selectedDate.getTime())) {
-                            selectedDate = undefined;
-                         } 
-                    } catch { selectedDate = undefined; }
-                 }
-                 return (
-                   <Popover>
-                     <PopoverTrigger asChild>
-                       <Button
-                         variant={"outline"}
-                         className={cn(
-                           "w-full justify-start text-left font-normal",
-                           !selectedDate && "text-muted-foreground"
-                         )}
-                       >
-                         <CalendarIcon className="mr-2 h-4 w-4" />
-                         {selectedDate ? format(selectedDate, "dd/MM/yyyy") : <span>Selecione uma data</span>}
-                       </Button>
-                     </PopoverTrigger>
-                     <PopoverContent className="w-auto p-0">
-                       <Calendar
-                         mode="single"
-                         selected={selectedDate}
-                         onSelect={(date) => field.onChange(date ? format(date, 'yyyy-MM-dd') : null)}
-                         initialFocus
-                       />
-                     </PopoverContent>
-                   </Popover>
-                 );
+                const [isCalendarOpen, setIsCalendarOpen] = useState(false);
+                
+                return (
+                  <div className="space-y-1">
+                    <Label>{stageFieldDefinition.field_name}{isRequired ? <span className="text-destructive"> *</span> : ''}</Label>
+                    <div>
+                      <DatePicker
+                        value={field.value as string}
+                        onChange={field.onChange}
+                        disabled={isLoading} 
+                        placeholder="Selecione uma data"
+                      />
+                    </div>
+                    {error && <p className="text-xs text-destructive mt-1">{error.message}</p>}
+                  </div>
+                );
               case 'select':
                  let options: { label: string, value: string }[] = [];
                  try {

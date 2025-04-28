@@ -83,19 +83,38 @@ export default function ProposalContractDetails({ control }: ProposalContractDet
           />
           <FormField
             control={control} 
+            name="lives" 
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Vidas</FormLabel>
+                <FormControl>
+                  <Input 
+                    type="number" 
+                    {...field} 
+                    placeholder="Nº de Vidas" 
+                    value={field.value ?? ''} 
+                    onChange={e => field.onChange(e.target.value ? parseInt(e.target.value, 10) : null)} 
+                    className="transition-all duration-200 focus-visible:ring-primary/80 focus-visible:border-primary/50"
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={control} 
             name="contract_value" 
             render={({ field }) => (
               <FormItem>
                 <FormLabel>Valor do Contrato (Mensal)</FormLabel>
                 <FormControl>
-                  {/* TODO: Usar input de moeda adequado */}
                   <Input 
                     type="number" 
                     step="0.01" 
                     {...field} 
                     placeholder="0,00" 
-                    value={field.value ?? 0} 
-                    onChange={e => field.onChange(parseFloat(e.target.value) || 0)} 
+                    value={field.value ?? ''} 
+                    onChange={e => field.onChange(e.target.value ? parseFloat(e.target.value) : null)} 
                     className="transition-all duration-200 focus-visible:ring-primary/80 focus-visible:border-primary/50"
                   />
                 </FormControl>

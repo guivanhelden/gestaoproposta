@@ -1013,6 +1013,7 @@ export type Database = {
           status: string | null
           submission_id: string | null
           type: string
+          lives: number | null
           updated_at: string | null
           validity_date: string | null
           value: number
@@ -1025,6 +1026,7 @@ export type Database = {
           status?: string | null
           submission_id?: string | null
           type: string
+          lives?: number | null
           updated_at?: string | null
           validity_date?: string | null
           value: number
@@ -1037,6 +1039,7 @@ export type Database = {
           status?: string | null
           submission_id?: string | null
           type?: string
+          lives?: number | null
           updated_at?: string | null
           validity_date?: string | null
           value?: number
@@ -1746,3 +1749,29 @@ export const Constants = {
     },
   },
 } as const
+
+// Adicionado para tipagens de Kanban Comments
+import { z } from 'zod';
+
+// Tipagem para o comentário buscado do Supabase, incluindo informações do perfil do autor
+export interface KanbanCommentWithProfile {
+  id: string;
+  card_id: string;
+  user_id: string;
+  content: string;
+  created_at: string;
+  updated_at: string;
+  profiles: {
+    id: string;
+    name: string | null;
+    avatar_url: string | null;
+  } | null; 
+}
+
+// Schema Zod para validação do formulário de novo comentário
+export const kanbanCommentSchema = z.object({
+  content: z.string().min(1, { message: 'O comentário não pode estar vazio.' }),
+});
+
+// Tipo inferido a partir do schema Zod para os valores do formulário
+export type KanbanCommentFormValues = z.infer<typeof kanbanCommentSchema>;

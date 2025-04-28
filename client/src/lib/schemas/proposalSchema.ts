@@ -9,12 +9,14 @@ export const proposalSchema = z.object({
   broker_phone: z.string().nullable().optional(),
   broker_email: z.string().nullable().optional(),
   broker_team_name: z.string().nullable().optional(),
-  operator_id: z.number().nullable().optional(),
+  operator_id: z.union([z.number(), z.null(), z.undefined()])
+    .refine(value => value !== null && value !== undefined, {
+      message: "Operadora é obrigatória"
+    }), // Aceita number, null ou undefined, mas valida como obrigatório
   operator: z.string().nullable().optional(), // Nome da operadora, pode vir de uma junção ou ser digitado
   plan_name: z.string().nullable().optional(),
   modality: z.string().nullable().optional(),
-  lives: z.number().min(1, "Número de vidas deve ser pelo menos 1"),
-  value: z.number().min(0, "Valor deve ser maior ou igual a zero"),
+  lives: z.number().min(1, "Número de vidas deve ser pelo menos 1").optional(),
   due_date: z.string().nullable().optional(), // Pode precisar de validação de data aqui
   observacoes: z.string().nullable().optional(),
 
@@ -42,6 +44,7 @@ export const proposalSchema = z.object({
 
   // Campos de pme_contracts (usados nos forms)
   contract_type: z.string().nullable().optional(),
+  contract_value: z.number().min(0, "Valor do contrato deve ser maior ou igual a zero").optional(),
   coparticipation: z.string().nullable().optional(),
   validity_date: z.string().nullable().optional(), // Pode precisar de validação de data
   pre_proposta: z.string().nullable().optional(),

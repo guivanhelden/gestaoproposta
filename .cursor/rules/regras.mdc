@@ -55,3 +55,5 @@ alwaysApply: true
 2. Validar e converter tipos de dados entre frontend e backend
 3. Respeitar as restrições de chave estrangeira
 4. Usar os campos e tipos corretos conforme o schema do banco de dados
+
+Para qualquer consulta ou alterção no banco de dados use o MCP do supabase

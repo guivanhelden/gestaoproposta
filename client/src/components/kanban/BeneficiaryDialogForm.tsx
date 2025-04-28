@@ -1,11 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, MouseEvent } from 'react';
 import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button"; // Embora os botões fiquem no pai, pode ser útil importar
+import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import { CalendarIcon } from "lucide-react";
-import { format, parse } from 'date-fns';
+import { format, parse, isValid } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { cn } from "@/lib/utils";
 
@@ -34,10 +34,35 @@ const BeneficiaryDialogForm: React.FC<BeneficiaryDialogFormProps> = ({
   onFormChange,
   isLoading
 }) => {
+  // Estado local para rastrear erros de validação (pode ser expandido conforme necessário)
+  const [dateError, setDateError] = useState<string | null>(null);
+  // Estado para controlar a abertura do popover do calendário
+  const [isCalendarOpen, setIsCalendarOpen] = useState(false);
 
   // Handler para mudança de data no Calendar
   const handleDateChange = (date: Date | undefined) => {
-    onFormChange('birth_date', date ? format(date, 'yyyy-MM-dd') : null);
+    try {
+      if (!date) {
+        onFormChange('birth_date', null);
+        setDateError(null);
+        return;
+      }
+      
+      if (!isValid(date)) {
+        setDateError("Data inválida");
+        return;
+      }
+      
+      const formattedDate = format(date, 'yyyy-MM-dd');
+      console.log(`[BeneficiaryDialogForm] Data formatada: ${formattedDate}`);
+      onFormChange('birth_date', formattedDate);
+      setDateError(null);
+      // Fechar o calendário após selecionar a data
+      setIsCalendarOpen(false);
+    } catch (error) {
+      console.error("Erro ao processar data:", error);
+      setDateError("Erro ao processar data");
+    }
   };
 
   // Parse da data string para o componente Calendar
@@ -45,11 +70,32 @@ const BeneficiaryDialogForm: React.FC<BeneficiaryDialogFormProps> = ({
   if (formData.birth_date) {
     try {
       selectedDate = parse(formData.birth_date, 'yyyy-MM-dd', new Date());
-      if (isNaN(selectedDate.getTime())) selectedDate = undefined; // Invalid date
-    } catch { 
+      if (!isValid(selectedDate)) {
+        console.warn(`[BeneficiaryDialogForm] Data inválida: ${formData.birth_date}`);
+        selectedDate = undefined;
+      }
+    } catch (error) { 
+      console.error(`[BeneficiaryDialogForm] Erro ao analisar data: ${formData.birth_date}`, error);
       selectedDate = undefined;
     }
   }
+
+  // Validar a data quando o formulário é carregado ou atualizado
+  useEffect(() => {
+    // Limpar erro se birth_date for null
+    if (formData.birth_date === null) {
+      setDateError(null);
+      return;
+    }
+    
+    // Validar formato da data se estiver presente
+    if (formData.birth_date && !/^\d{4}-\d{2}-\d{2}$/.test(formData.birth_date)) {
+      console.warn(`[BeneficiaryDialogForm] Formato de data inválido: ${formData.birth_date}`);
+      setDateError("Formato de data inválido");
+    } else {
+      setDateError(null);
+    }
+  }, [formData.birth_date]);
 
   return (
     // Usamos um div, pois o <form> e submit são gerenciados pelo pai via botão no DialogFooter
@@ -83,32 +129,37 @@ const BeneficiaryDialogForm: React.FC<BeneficiaryDialogFormProps> = ({
         {/* Campo Data de Nascimento (Comum) */}
         <div className="space-y-1">
           <Label>Data de Nascimento</Label>
-           <Popover>
-             <PopoverTrigger asChild>
-               <Button
-                 variant={"outline"}
-                 className={cn(
-                   "w-full justify-start text-left font-normal",
-                   !selectedDate && "text-muted-foreground"
-                 )}
-                 disabled={isLoading}
-               >
-                 <CalendarIcon className="mr-2 h-4 w-4" />
-                 {selectedDate ? format(selectedDate, "dd/MM/yyyy", { locale: ptBR }) : <span>Selecione a data</span>}
-               </Button>
-             </PopoverTrigger>
-             <PopoverContent className="w-auto p-0">
-               <Calendar
-                 mode="single"
-                 selected={selectedDate}
-                 onSelect={handleDateChange}
-                 disabled={isLoading}
-                 initialFocus
-                 // Definir range de datas se necessário
-                 // fromYear={...} toYear={...}
-               />
-             </PopoverContent>
-           </Popover>
+          <div className={cn(
+            "relative rounded-md border border-input shadow-sm focus-within:ring-1 focus-within:ring-ring",
+            dateError && "border-red-500"
+          )}>
+            <div 
+              className="p-2 rounded-md flex justify-between items-center cursor-pointer"
+              onClick={() => !isLoading && setIsCalendarOpen(!isCalendarOpen)}
+            >
+              <span className={cn(
+                "flex-grow",
+                !selectedDate && "text-muted-foreground"
+              )}>
+                {selectedDate ? format(selectedDate, "dd/MM/yyyy", { locale: ptBR }) : "Selecione a data"}
+              </span>
+              <CalendarIcon className="h-4 w-4 opacity-70" />
+            </div>
+            
+            {isCalendarOpen && (
+              <div className="absolute z-50 mt-1 bg-popover rounded-md shadow-md">
+                <Calendar
+                  mode="single"
+                  selected={selectedDate}
+                  onSelect={handleDateChange}
+                  disabled={isLoading}
+                  initialFocus
+                  locale={ptBR}
+                />
+              </div>
+            )}
+          </div>
+          {dateError && <p className="text-sm text-red-500 mt-1">{dateError}</p>}
         </div>
       </div>
 

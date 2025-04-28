@@ -67,6 +67,7 @@ export type ProposalDetails = {
     type: string | null;
     coparticipation: string | null;
     value: number | null;
+    lives: number | null;
     validity_date: string | null;
     pre_proposta: string | null;
   } | null;
@@ -122,32 +123,33 @@ export type OperatorInfo = {
  * @returns Um objeto com os detalhes da proposta ou lança um erro.
  */
 export async function fetchProposalDetails(submissionId: string): Promise<ProposalDetails> {
-  console.log(`Buscando detalhes para submission_id: ${submissionId}`); // Log para debug
+  console.log(`Buscando detalhes para submission_id: ${submissionId}`); 
   
-  // Verificar se existe cache local para reduzir chamadas ao Supabase
+  // --- REMOVER LÓGICA DE CACHE LOCALSTORAGE --- 
+  /*
   const cacheKey = `proposal_details_${submissionId}`;
   const cachedData = localStorage.getItem(cacheKey);
-  
-  // Se tiver cache e for válido (menos de 5 minutos), utilize-o
   if (cachedData) {
     try {
       const parsedCache = JSON.parse(cachedData);
       const cacheTime = parsedCache.timestamp || 0;
       const now = Date.now();
       const cacheAge = now - cacheTime;
-      
-      // Cache válido por 5 minutos (300000ms)
-      if (cacheAge < 300000) {
-        console.log("Usando dados em cache para submission_id:", submissionId);
-        return parsedCache.data;
+      if (cacheAge < 300000) { // Cache de 5 minutos
+        console.log("Usando dados em cache LOCALSTORAGE para submission_id:", submissionId); 
+        // NUNCA MAIS RETORNAR DAQUI DIRETAMENTE
+        // return parsedCache.data; 
       }
-      console.log("Cache expirado, buscando dados frescos");
+      console.log("Cache localStorage expirado ou inválido.");
     } catch (e) {
-      console.warn("Erro ao parsear cache:", e);
+      console.warn("Erro ao parsear cache localStorage:", e);
     }
   }
-  
-  // Se não tiver cache ou estiver expirado, buscar do Supabase
+  */
+  // --- FIM DA REMOÇÃO --- 
+
+  // Chamar diretamente a RPC do Supabase
+  console.log("Chamando RPC get_full_proposal_data via Supabase...");
   const { data, error } = await supabase.rpc('get_full_proposal_data', {
     p_submission_id: submissionId
   });
@@ -162,17 +164,20 @@ export async function fetchProposalDetails(submissionId: string): Promise<Propos
     return null; // Retorna null se o tipo ProposalDetails permitir
   }
 
-  console.log("Dados recebidos da RPC:", data); // Log para debug
+  console.log("Dados recebidos da RPC:", data); 
   
-  // Salvar no cache local com timestamp
+  // --- REMOVER ESCRITA NO CACHE LOCALSTORAGE --- 
+  /*
   try {
     localStorage.setItem(cacheKey, JSON.stringify({
       data: data,
       timestamp: Date.now()
     }));
   } catch (e) {
-    console.warn("Erro ao salvar cache:", e);
+    console.warn("Erro ao salvar no cache localStorage:", e);
   }
+  */
+  // --- FIM DA REMOÇÃO --- 
   
   return data as unknown as ProposalDetails;
 }
