@@ -275,6 +275,79 @@ export type Database = {
         }
         Relationships: []
       }
+      kanban_card_stage_history: {
+        Row: {
+          card_id: string
+          created_at: string
+          from_stage_id: string | null
+          id: string
+          moved_by: string
+          notes: string | null
+          to_stage_id: string
+        }
+        Insert: {
+          card_id: string
+          created_at?: string
+          from_stage_id?: string | null
+          id?: string
+          moved_by: string
+          notes?: string | null
+          to_stage_id: string
+        }
+        Update: {
+          card_id?: string
+          created_at?: string
+          from_stage_id?: string | null
+          id?: string
+          moved_by?: string
+          notes?: string | null
+          to_stage_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "kanban_card_stage_history_card_id_fkey"
+            columns: ["card_id"]
+            isOneToOne: false
+            referencedRelation: "kanban_cards"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "kanban_card_stage_history_card_id_fkey"
+            columns: ["card_id"]
+            isOneToOne: false
+            referencedRelation: "view_kanban_cards"
+            referencedColumns: ["card_id"]
+          },
+          {
+            foreignKeyName: "kanban_card_stage_history_card_id_fkey"
+            columns: ["card_id"]
+            isOneToOne: false
+            referencedRelation: "view_kanban_cards_dependents"
+            referencedColumns: ["card_id"]
+          },
+          {
+            foreignKeyName: "kanban_card_stage_history_card_id_fkey"
+            columns: ["card_id"]
+            isOneToOne: false
+            referencedRelation: "view_kanban_cards_holders"
+            referencedColumns: ["card_id"]
+          },
+          {
+            foreignKeyName: "kanban_card_stage_history_from_stage_id_fkey"
+            columns: ["from_stage_id"]
+            isOneToOne: false
+            referencedRelation: "kanban_stages"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "kanban_card_stage_history_to_stage_id_fkey"
+            columns: ["to_stage_id"]
+            isOneToOne: false
+            referencedRelation: "kanban_stages"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       kanban_cards: {
         Row: {
           board_id: string
@@ -291,6 +364,7 @@ export type Database = {
           lives: number
           observacoes: string | null
           operator: string
+          operator_id: number | null
           position: number
           stage_id: string
           submission_id: string | null
@@ -312,6 +386,7 @@ export type Database = {
           lives?: number
           observacoes?: string | null
           operator: string
+          operator_id?: number | null
           position?: number
           stage_id: string
           submission_id?: string | null
@@ -333,6 +408,7 @@ export type Database = {
           lives?: number
           observacoes?: string | null
           operator?: string
+          operator_id?: number | null
           position?: number
           stage_id?: string
           submission_id?: string | null
@@ -345,6 +421,13 @@ export type Database = {
             columns: ["board_id"]
             isOneToOne: false
             referencedRelation: "kanban_boards"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "kanban_cards_operator_id_fkey"
+            columns: ["operator_id"]
+            isOneToOne: false
+            referencedRelation: "operators"
             referencedColumns: ["id"]
           },
           {
@@ -488,6 +571,160 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "view_kanban_cards_holders"
             referencedColumns: ["card_id"]
+          },
+        ]
+      }
+      kanban_stage_data: {
+        Row: {
+          card_id: string
+          created_at: string
+          created_by: string
+          field_id: string
+          id: string
+          updated_at: string
+          updated_by: string | null
+          value: string | null
+          version: number
+        }
+        Insert: {
+          card_id: string
+          created_at?: string
+          created_by: string
+          field_id: string
+          id?: string
+          updated_at?: string
+          updated_by?: string | null
+          value?: string | null
+          version?: number
+        }
+        Update: {
+          card_id?: string
+          created_at?: string
+          created_by?: string
+          field_id?: string
+          id?: string
+          updated_at?: string
+          updated_by?: string | null
+          value?: string | null
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "kanban_stage_data_card_id_fkey"
+            columns: ["card_id"]
+            isOneToOne: false
+            referencedRelation: "kanban_cards"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "kanban_stage_data_card_id_fkey"
+            columns: ["card_id"]
+            isOneToOne: false
+            referencedRelation: "view_kanban_cards"
+            referencedColumns: ["card_id"]
+          },
+          {
+            foreignKeyName: "kanban_stage_data_card_id_fkey"
+            columns: ["card_id"]
+            isOneToOne: false
+            referencedRelation: "view_kanban_cards_dependents"
+            referencedColumns: ["card_id"]
+          },
+          {
+            foreignKeyName: "kanban_stage_data_card_id_fkey"
+            columns: ["card_id"]
+            isOneToOne: false
+            referencedRelation: "view_kanban_cards_holders"
+            referencedColumns: ["card_id"]
+          },
+          {
+            foreignKeyName: "kanban_stage_data_field_id_fkey"
+            columns: ["field_id"]
+            isOneToOne: false
+            referencedRelation: "kanban_stage_fields"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      kanban_stage_data_history: {
+        Row: {
+          changed_at: string
+          changed_by: string
+          id: string
+          stage_data_id: string
+          value: string | null
+          version: number
+        }
+        Insert: {
+          changed_at?: string
+          changed_by: string
+          id?: string
+          stage_data_id: string
+          value?: string | null
+          version: number
+        }
+        Update: {
+          changed_at?: string
+          changed_by?: string
+          id?: string
+          stage_data_id?: string
+          value?: string | null
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "kanban_stage_data_history_stage_data_id_fkey"
+            columns: ["stage_data_id"]
+            isOneToOne: false
+            referencedRelation: "kanban_stage_data"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      kanban_stage_fields: {
+        Row: {
+          created_at: string
+          default_value: string | null
+          field_name: string
+          field_type: string
+          id: string
+          is_required: boolean
+          options: Json | null
+          position: number
+          stage_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          default_value?: string | null
+          field_name: string
+          field_type: string
+          id?: string
+          is_required?: boolean
+          options?: Json | null
+          position?: number
+          stage_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          default_value?: string | null
+          field_name?: string
+          field_type?: string
+          id?: string
+          is_required?: boolean
+          options?: Json | null
+          position?: number
+          stage_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "kanban_stage_fields_stage_id_fkey"
+            columns: ["stage_id"]
+            isOneToOne: false
+            referencedRelation: "kanban_stages"
+            referencedColumns: ["id"]
           },
         ]
       }
@@ -1325,7 +1562,54 @@ export type Database = {
       }
     }
     Functions: {
+      create_minimal_proposal: {
+        Args: {
+          p_board_id: string
+          p_broker_id: number
+          p_operator_id: number
+          p_plan_name: string
+          p_modality: string
+          p_cnpj: string
+          p_razao_social: string
+          p_responsavel_nome: string
+          p_responsavel_email: string
+          p_responsavel_telefone: string
+          p_lives: number
+          p_value: number
+          p_observacoes: string
+        }
+        Returns: string
+      }
+      get_kanban_cards_with_operator_logo: {
+        Args: { p_board_id: string }
+        Returns: {
+          id: string
+          created_at: string
+          company_name: string
+          value: number
+          due_date: string
+          lives: number
+          board_id: string
+          stage_id: string
+          operator_id: number
+          created_by: string
+          position: number
+          contact_email: string
+          board_type: string
+          updated_at: string
+          has_documents: boolean
+          has_comments: boolean
+          has_warnings: boolean
+          stage_title: string
+          operator_name: string
+          operator_logo_url: string
+        }[]
+      }
       get_proposal_details: {
+        Args: { p_submission_id: string }
+        Returns: Json
+      }
+      get_full_proposal_data: {
         Args: { p_submission_id: string }
         Returns: Json
       }
@@ -1335,6 +1619,10 @@ export type Database = {
           _role: Database["public"]["Enums"]["user_role"]
         }
         Returns: boolean
+      }
+      update_proposal_details: {
+        Args: { p_submission_id: string; p_form_data: Json }
+        Returns: undefined
       }
     }
     Enums: {

@@ -10,6 +10,7 @@ type CardSupabaseProps = {
 };
 
 export default function CardSupabase({ card, onClick, onDragStart }: CardSupabaseProps) {
+  console.log("Props recebidas pelo CardSupabase:", card);
   
   const formatDate = (dateString: string) => {
     try {
@@ -28,6 +29,7 @@ export default function CardSupabase({ card, onClick, onDragStart }: CardSupabas
 
   const dueDate = formatDueDate(card.due_date);
   const creationDate = formatDate(card.created_at);
+  const operatorLogoUrl = card.operators?.logo_url;
 
   return (
     <div
@@ -43,9 +45,21 @@ export default function CardSupabase({ card, onClick, onDragStart }: CardSupabas
         >
           {card.company_name || "Sem nome"}
         </h4>
-        <span className="badge badge-info text-xs flex-shrink-0 ml-2">
-          {card.operator}
-        </span>
+        {operatorLogoUrl ? (
+          <img 
+            src={operatorLogoUrl} 
+            alt={`Logo ${card.operator}`}
+            className="h-6 w-auto flex-shrink-0 ml-2 object-contain rounded"
+            onError={(e) => { 
+              const imgElement = e.target as HTMLImageElement;
+              imgElement.style.display = 'none';
+            }}
+          />
+        ) : (
+          <span className="badge badge-info text-xs flex-shrink-0 ml-2">
+            {card.operator}
+          </span>
+        )}
       </div>
       
       {card.lives > 0 && (

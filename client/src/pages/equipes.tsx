@@ -7,8 +7,6 @@ import supabase from "../lib/supabase";
 // Importar o novo componente de formulário
 import EquipeForm, { Equipe } from "@/components/equipes/equipe-form";
 
-import Header from "@/components/layout/header";
-import Sidebar from "@/components/layout/sidebar";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { Button } from "@/components/ui/button";
 import { 
@@ -179,107 +177,99 @@ export default function Equipes() {
   };
 
   return (
-    <div className="min-h-screen w-full flex flex-col">
-      <Header />
-      
-      <div className="flex flex-1 overflow-hidden">
-        <Sidebar />
-        
-        <main className="flex-1 overflow-y-auto">
-          <div className="p-6">
-            <div className="mb-6 flex flex-col md:flex-row md:items-center md:justify-between">
-              <div>
-                <h2 className="text-2xl font-bold text-gray-800">Equipes</h2>
-                <p className="text-gray-600">Gerencie as equipes de corretores no sistema</p>
-              </div>
-              <div className="mt-4 md:mt-0 flex flex-col md:flex-row items-start md:items-center gap-2">
-                <div className="relative w-full md:w-auto">
-                  <Search className="absolute left-3 top-2.5 h-4 w-4 text-gray-400" />
-                  <Input 
-                    placeholder="Buscar equipe..."
-                    className="pl-10"
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                  />
-                </div>
-                <Button className="w-full md:w-auto" onClick={handleOpenCreateDialog}>
-                  <Plus className="h-4 w-4 mr-2" />
-                  <span>Nova Equipe</span>
-                </Button>
-              </div>
-            </div>
-
-            {/* Tabela de Equipes */}
-            <div className="bg-white rounded-lg shadow overflow-hidden">
-              {isLoading ? (
-                <div className="text-center py-10">
-                  <div className="spinner h-8 w-8 mx-auto border-4 border-primary border-r-transparent rounded-full animate-spin mb-4"></div>
-                  <p>Carregando equipes...</p>
-                </div>
-              ) : (
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Nome da Equipe</TableHead>
-                      <TableHead>E-mail</TableHead>
-                      <TableHead>Corretores</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead className="text-right">Ações</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {equipes && equipes.length > 0 ? (
-                      equipes.map(equipe => (
-                        <TableRow key={equipe.id}>
-                          <TableCell className="font-medium">{equipe.name}</TableCell>
-                          <TableCell>{equipe.email || "-"}</TableCell>
-                          <TableCell>{getCorretoCountByEquipe(equipe.id)}</TableCell>
-                          <TableCell>
-                            <StatusBadge variant={equipe.status ? "success" : "danger"}>
-                              {equipe.status ? "Ativa" : "Inativa"}
-                            </StatusBadge>
-                          </TableCell>
-                          <TableCell className="text-right">
-                            <Button 
-                              variant="ghost" 
-                              size="icon" 
-                              className="mr-2"
-                              onClick={() => handleManageUsers(equipe)}
-                            >
-                              <Users className="h-4 w-4" />
-                            </Button>
-                            <Button 
-                              variant="ghost" 
-                              size="icon" 
-                              className="mr-2"
-                              onClick={() => handleOpenEditDialog(equipe)}
-                            >
-                              <Edit className="h-4 w-4" />
-                            </Button>
-                            <Button 
-                              variant="ghost" 
-                              size="icon"
-                              className="text-destructive" 
-                              onClick={() => handleConfirmDelete(equipe)}
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </TableCell>
-                        </TableRow>
-                      ))
-                    ) : (
-                      <TableRow>
-                        <TableCell colSpan={5} className="text-center py-6">
-                          {searchTerm ? "Nenhuma equipe encontrada para a busca." : "Nenhuma equipe cadastrada."}
-                        </TableCell>
-                      </TableRow>
-                    )}
-                  </TableBody>
-                </Table>
-              )}
-            </div>
+    <>
+      <div className="p-6">
+        <div className="mb-6 flex flex-col md:flex-row md:items-center md:justify-between">
+          <div>
+            <h2 className="text-2xl font-bold text-gray-800">Equipes</h2>
+            <p className="text-gray-600">Gerencie as equipes de corretores no sistema</p>
           </div>
-        </main>
+          <div className="mt-4 md:mt-0 flex flex-col md:flex-row items-start md:items-center gap-2">
+            <div className="relative w-full md:w-auto">
+              <Search className="absolute left-3 top-2.5 h-4 w-4 text-gray-400" />
+              <Input 
+                placeholder="Buscar equipe..."
+                className="pl-10"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+              />
+            </div>
+            <Button className="w-full md:w-auto" onClick={handleOpenCreateDialog}>
+              <Plus className="h-4 w-4 mr-2" />
+              <span>Nova Equipe</span>
+            </Button>
+          </div>
+        </div>
+
+        {/* Tabela de Equipes */}
+        <div className="bg-white rounded-lg shadow overflow-hidden">
+          {isLoading ? (
+            <div className="text-center py-10">
+              <div className="spinner h-8 w-8 mx-auto border-4 border-primary border-r-transparent rounded-full animate-spin mb-4"></div>
+              <p>Carregando equipes...</p>
+            </div>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Nome da Equipe</TableHead>
+                  <TableHead>E-mail</TableHead>
+                  <TableHead>Corretores</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead className="text-right">Ações</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {equipes && equipes.length > 0 ? (
+                  equipes.map(equipe => (
+                    <TableRow key={equipe.id}>
+                      <TableCell className="font-medium">{equipe.name}</TableCell>
+                      <TableCell>{equipe.email || "-"}</TableCell>
+                      <TableCell>{getCorretoCountByEquipe(equipe.id)}</TableCell>
+                      <TableCell>
+                        <StatusBadge variant={equipe.status ? "success" : "danger"}>
+                          {equipe.status ? "Ativa" : "Inativa"}
+                        </StatusBadge>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <Button 
+                          variant="ghost" 
+                          size="icon" 
+                          className="mr-2"
+                          onClick={() => handleManageUsers(equipe)}
+                        >
+                          <Users className="h-4 w-4" />
+                        </Button>
+                        <Button 
+                          variant="ghost" 
+                          size="icon" 
+                          className="mr-2"
+                          onClick={() => handleOpenEditDialog(equipe)}
+                        >
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                        <Button 
+                          variant="ghost" 
+                          size="icon"
+                          className="text-destructive" 
+                          onClick={() => handleConfirmDelete(equipe)}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                ) : (
+                  <TableRow>
+                    <TableCell colSpan={5} className="text-center py-6">
+                      {searchTerm ? "Nenhuma equipe encontrada para a busca." : "Nenhuma equipe cadastrada."}
+                    </TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          )}
+        </div>
       </div>
 
       {/* Diálogo de Criação/Edição */}
@@ -413,6 +403,6 @@ export default function Equipes() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </div>
+    </>
   );
 }

@@ -145,3 +145,8 @@
 .navbar-item.active {
   @apply bg-primary/15 border-r-[3px] border-primary;
 }
+
+/* Estilo específico para navbar-item quando a sidebar está recolhida */
+.navbar-item.justify-center.active {
+  @apply border-r-0 border-l-[3px];
+}

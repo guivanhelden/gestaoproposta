@@ -5,6 +5,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { DndProvider } from "@/lib/dnd-provider";
 import { AuthProvider } from "@/hooks/use-auth";
+import MainLayout from "@/components/layout/MainLayout";
 
 import NotFound from "@/pages/not-found";
 import AuthPage from "@/pages/auth-page";
@@ -29,35 +30,48 @@ import { ProtectedRoute } from "./lib/protected-route";
 // Componente de redirecionamento para as antigas rotas de quadros
 const QuadrosRedirect = () => <Redirect to="/quadros" />;
 
+// Função para envolver um componente com MainLayout
+const withLayout = (Component: React.ComponentType<any>) => {
+  return (props: any) => (
+    <MainLayout>
+      <Component {...props} />
+    </MainLayout>
+  );
+};
+
 function Router() {
   return (
     <Switch>
+      {/* Rota pública sem layout principal */}
       <Route path="/auth" component={AuthPage} />
-      <ProtectedRoute path="/" component={HomePage} />
-      <ProtectedRoute path="/dashboard" component={Dashboard} />
+
+      {/* Rotas protegidas com layout principal */}
+      <ProtectedRoute path="/" component={withLayout(HomePage)} />
+      {/* Reaplicar o withLayout na rota /dashboard */}
+      <ProtectedRoute path="/dashboard" component={withLayout(Dashboard)} /> 
       
       {/* Quadros de Propostas */}
-      <ProtectedRoute path="/quadros" component={Quadros} />
-      <ProtectedRoute path="/quadros/gerenciador" component={GerenciadorQuadros} />
-      <ProtectedRoute path="/quadros/visualizar/:id" component={VisualizarQuadro} />
+      <ProtectedRoute path="/quadros" component={withLayout(Quadros)} />
+      <ProtectedRoute path="/quadros/gerenciador" component={withLayout(GerenciadorQuadros)} />
+      <ProtectedRoute path="/quadros/visualizar/:id" component={withLayout(VisualizarQuadro)} />
       
       {/* Redirecionamentos para rotas antigas */}
-      <ProtectedRoute path="/quadros/pme-seguradoras" component={QuadrosRedirect} />
-      <ProtectedRoute path="/quadros/pme-principais-operadoras" component={QuadrosRedirect} />
-      <ProtectedRoute path="/quadros/pme-demais-operadoras" component={QuadrosRedirect} />
-      <ProtectedRoute path="/quadros/pessoa-fisica" component={QuadrosRedirect} />
-      <ProtectedRoute path="/quadros/adesao" component={QuadrosRedirect} />
+      <ProtectedRoute path="/quadros/pme-seguradoras" component={withLayout(QuadrosRedirect)} />
+      <ProtectedRoute path="/quadros/pme-principais-operadoras" component={withLayout(QuadrosRedirect)} />
+      <ProtectedRoute path="/quadros/pme-demais-operadoras" component={withLayout(QuadrosRedirect)} />
+      <ProtectedRoute path="/quadros/pessoa-fisica" component={withLayout(QuadrosRedirect)} />
+      <ProtectedRoute path="/quadros/adesao" component={withLayout(QuadrosRedirect)} />
       
       {/* Outras rotas */}
-      <ProtectedRoute path="/emails" component={Emails} />
-      <ProtectedRoute path="/operadoras" component={Operadoras} />
-      <ProtectedRoute path="/administradoras" component={Administradoras} />
-      <ProtectedRoute path="/equipes" component={Equipes} />
-      <ProtectedRoute path="/corretores" component={Corretores} />
-      <ProtectedRoute path="/ajustes" component={Ajustes} />
+      <ProtectedRoute path="/emails" component={withLayout(Emails)} />
+      <ProtectedRoute path="/operadoras" component={withLayout(Operadoras)} />
+      <ProtectedRoute path="/administradoras" component={withLayout(Administradoras)} />
+      <ProtectedRoute path="/equipes" component={withLayout(Equipes)} />
+      <ProtectedRoute path="/corretores" component={withLayout(Corretores)} />
+      <ProtectedRoute path="/ajustes" component={withLayout(Ajustes)} />
       
-      {/* Fallback para 404 */}
-      <Route component={NotFound} />
+      {/* Rota NotFound - Deve ser a última */}
+      <Route component={NotFound} /> 
     </Switch>
   );
 }

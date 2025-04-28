@@ -28,6 +28,7 @@ type NavItemProps = {
   children: React.ReactNode;
   isActive?: boolean;
   isSubmenu?: boolean;
+  isCollapsed?: boolean;
   onClick?: () => void;
 };
 
@@ -41,6 +42,7 @@ const NavItem = ({
   children,
   isActive = false,
   isSubmenu = false,
+  isCollapsed = false,
   onClick
 }: NavItemProps) => {
   return (
@@ -50,11 +52,19 @@ const NavItem = ({
       className={cn(
         "navbar-item",
         isActive && "active",
-        isSubmenu && "ml-7 text-xs py-1.5"
+        isSubmenu && "ml-7 text-xs py-1.5",
+        isCollapsed && "justify-center px-1"
       )}
     >
-      {icon && <span className="w-5 mr-2 text-primary">{icon}</span>}
-      <span>{children}</span>
+      {icon && (
+        <span className={cn(
+          "text-primary",
+          isCollapsed ? "w-auto m-0" : "w-5 mr-2"
+        )}>
+          {icon}
+        </span>
+      )}
+      {!isCollapsed && <span>{children}</span>}
     </Link>
   );
 };
@@ -100,12 +110,16 @@ export default function Sidebar({ isCollapsed = false }: SidebarProps) {
           </div>
         )}
         
-        <div className="space-y-1 px-2 flex-1 overflow-y-auto">
+        <div className={cn(
+          "space-y-1 px-2 flex-1 overflow-y-auto",
+          isCollapsed && "px-1"
+        )}>
           {/* Dashboard */}
           <NavItem 
             href="/dashboard" 
             icon={<BarChart3 />} 
             isActive={location === "/dashboard"}
+            isCollapsed={isCollapsed}
           >
             Dashboard
           </NavItem>
@@ -113,19 +127,29 @@ export default function Sidebar({ isCollapsed = false }: SidebarProps) {
           {/* Quadros de Propostas */}
           <div>
             <div 
-              className="navbar-item flex items-center justify-between cursor-pointer"
+              className={cn(
+                "navbar-item flex items-center cursor-pointer",
+                isCollapsed ? "justify-center px-1" : "justify-between px-3"
+              )}
               onClick={() => toggleMenu("quadros")}
             >
               <div className="flex items-center">
-                <span className="w-5 mr-2 text-primary"><Kanban /></span>
+                <span className={cn(
+                  "text-primary",
+                  isCollapsed ? "w-auto m-0" : "w-5 mr-2"
+                )}>
+                  <Kanban />
+                </span>
                 {!isCollapsed && <span>Quadros de Propostas</span>}
               </div>
-              <span>
-                {expandedMenus.quadros ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
-              </span>
+              {!isCollapsed && (
+                <span>
+                  {expandedMenus.quadros ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+                </span>
+              )}
             </div>
             
-            {expandedMenus.quadros && (
+            {expandedMenus.quadros && !isCollapsed && (
               <div className="space-y-1 mt-1">
                 <NavItem 
                   href="/quadros/gerenciador" 
@@ -181,8 +205,9 @@ export default function Sidebar({ isCollapsed = false }: SidebarProps) {
             href="/emails" 
             icon={<Mail />} 
             isActive={location === "/emails"}
+            isCollapsed={isCollapsed}
           >
-            {!isCollapsed && 'E-mails'}
+            E-mails
           </NavItem>
           
           {/* Operadoras */}
@@ -190,8 +215,9 @@ export default function Sidebar({ isCollapsed = false }: SidebarProps) {
             href="/operadoras" 
             icon={<Building />} 
             isActive={location === "/operadoras"}
+            isCollapsed={isCollapsed}
           >
-            {!isCollapsed && 'Operadoras'}
+            Operadoras
           </NavItem>
           
           {/* Administradoras */}
@@ -199,8 +225,9 @@ export default function Sidebar({ isCollapsed = false }: SidebarProps) {
             href="/administradoras" 
             icon={<Briefcase />} 
             isActive={location === "/administradoras"}
+            isCollapsed={isCollapsed}
           >
-            {!isCollapsed && 'Administradoras'}
+            Administradoras
           </NavItem>
           
           {/* Equipes */}
@@ -208,8 +235,9 @@ export default function Sidebar({ isCollapsed = false }: SidebarProps) {
             href="/equipes" 
             icon={<Users />} 
             isActive={location === "/equipes"}
+            isCollapsed={isCollapsed}
           >
-            {!isCollapsed && 'Equipes'}
+            Equipes
           </NavItem>
           
           {/* Corretores */}
@@ -217,19 +245,21 @@ export default function Sidebar({ isCollapsed = false }: SidebarProps) {
             href="/corretores" 
             icon={<UserRoundCheck />} 
             isActive={location === "/corretores"}
+            isCollapsed={isCollapsed}
           >
-            {!isCollapsed && 'Corretores'}
+            Corretores
           </NavItem>
         </div>
         
-        <div className="mt-6 px-3">
+        <div className={cn("mt-6", isCollapsed ? "px-1" : "px-3")}>
           {/* Ajustes */}
           <NavItem 
             href="/ajustes" 
-            icon={<Settings className="text-gray-500" />} 
+            icon={<Settings />} 
             isActive={location === "/ajustes"}
+            isCollapsed={isCollapsed}
           >
-            {!isCollapsed && 'Ajustes'}
+            Ajustes
           </NavItem>
           
           {/* Informações - mostrar apenas se não estiver recolhido */}

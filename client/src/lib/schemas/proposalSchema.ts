@@ -25,8 +25,20 @@ export const proposalSchema = z.object({
   data_abertura: z.string().nullable().optional(), // Pode precisar de validação de data
   natureza_juridica: z.string().nullable().optional(),
   situacao_cadastral: z.string().nullable().optional(),
+  cnae: z.string().nullable().optional(),
+  cnae_descricao: z.string().nullable().optional(),
+  is_mei: z.boolean().nullable().optional(),
   // inscricao_estadual, endereco_completo, telefone foram removidos por não existirem no tipo retornado
   cep: z.string().nullable().optional(),
+
+  // Campos de Endereço (pme_companies)
+  tipo_logradouro: z.string().nullable().optional(),
+  logradouro: z.string().nullable().optional(),
+  numero: z.string().nullable().optional(),
+  complemento: z.string().nullable().optional(),
+  bairro: z.string().nullable().optional(),
+  cidade: z.string().nullable().optional(),
+  uf: z.string().nullable().optional(),
 
   // Campos de pme_contracts (usados nos forms)
   contract_type: z.string().nullable().optional(),

@@ -1,7 +1,5 @@
 import { useState, useEffect } from "react";
 import KanbanBoardsManager from "@/components/kanban/kanban-boards-manager";
-import Header from "@/components/layout/header";
-import Sidebar from "@/components/layout/sidebar";
 import { useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
@@ -78,32 +76,24 @@ export default function GerenciadorQuadros() {
   };
 
   return (
-    <div className="min-h-screen w-full flex flex-col">
-      <Header />
+    <>
+      {/* Verificação de Admin para visualizar todos os quadros */}
+      {user && !isAdmin && (
+        <div className="bg-blue-50 p-4 m-6 rounded-md border border-blue-200">
+          <h3 className="text-blue-800 font-medium mb-2">Permissões Limitadas</h3>
+          <p className="text-blue-700 mb-4">
+            Você está vendo apenas os quadros que você criou. Para ver todos os quadros, você precisa de permissões de administrador.
+          </p>
+          <Button 
+            onClick={addAdminRole}
+            disabled={isAddingAdminRole}
+          >
+            {isAddingAdminRole ? "Adicionando..." : "Adicionar Permissões de Administrador"}
+          </Button>
+        </div>
+      )}
       
-      <div className="flex flex-1 overflow-hidden">
-        <Sidebar />
-        
-        <main className="flex-1 overflow-y-auto">
-          {/* Verificação de Admin para visualizar todos os quadros */}
-          {user && !isAdmin && (
-            <div className="bg-blue-50 p-4 m-6 rounded-md border border-blue-200">
-              <h3 className="text-blue-800 font-medium mb-2">Permissões Limitadas</h3>
-              <p className="text-blue-700 mb-4">
-                Você está vendo apenas os quadros que você criou. Para ver todos os quadros, você precisa de permissões de administrador.
-              </p>
-              <Button 
-                onClick={addAdminRole}
-                disabled={isAddingAdminRole}
-              >
-                {isAddingAdminRole ? "Adicionando..." : "Adicionar Permissões de Administrador"}
-              </Button>
-            </div>
-          )}
-          
-          <KanbanBoardsManager />
-        </main>
-      </div>
-    </div>
+      <KanbanBoardsManager />
+    </>
   );
 } 

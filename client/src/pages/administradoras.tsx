@@ -7,8 +7,9 @@ import supabase from "../lib/supabase";
 // Importar o novo componente de formulário
 import AdministradoraForm, { Administradora } from "@/components/administradoras/administradora-form";
 
-import Header from "@/components/layout/header";
-import Sidebar from "@/components/layout/sidebar";
+// Remover imports de Header e Sidebar
+// import Header from "@/components/layout/header";
+// import Sidebar from "@/components/layout/sidebar";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { Button } from "@/components/ui/button";
 import { 
@@ -139,108 +140,101 @@ export default function Administradoras() {
     setDeleteDialogOpen(true);
   };
 
+  // Remover a estrutura externa de div/Header/Sidebar/main
   return (
-    <div className="min-h-screen w-full flex flex-col">
-      <Header />
-      
-      <div className="flex flex-1 overflow-hidden">
-        <Sidebar />
-        
-        <main className="flex-1 overflow-y-auto">
-          <div className="p-6">
-            <div className="mb-6 flex flex-col md:flex-row md:items-center md:justify-between">
-              <div>
-                <h2 className="text-2xl font-bold text-gray-800">Administradoras</h2>
-                <p className="text-gray-600">Gerencie as administradoras de planos disponíveis no sistema</p>
-              </div>
-              <div className="mt-4 md:mt-0 flex flex-col md:flex-row items-start md:items-center gap-2">
-                <div className="relative w-full md:w-auto">
-                  <Search className="absolute left-3 top-2.5 h-4 w-4 text-gray-400" />
-                  <Input 
-                    placeholder="Buscar administradora..."
-                    className="pl-10"
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                  />
-                </div>
-                <Button className="w-full md:w-auto" onClick={handleOpenCreateDialog}>
-                  <Plus className="h-4 w-4 mr-2" />
-                  <span>Nova Administradora</span>
-                </Button>
-              </div>
-            </div>
-
-            {/* Tabela de Administradoras */}
-            <div className="bg-white rounded-lg shadow overflow-hidden">
-              {isLoading ? (
-                <div className="text-center py-10">
-                  <div className="spinner h-8 w-8 mx-auto border-4 border-primary border-r-transparent rounded-full animate-spin mb-4"></div>
-                  <p>Carregando administradoras...</p>
-                </div>
-              ) : (
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Nome da Administradora</TableHead>
-                      <TableHead>Logo</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead className="text-right">Ações</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {administradoras && administradoras.length > 0 ? (
-                      administradoras.map(administradora => (
-                        <TableRow key={administradora.id}>
-                          <TableCell className="font-medium">{administradora.nome}</TableCell>
-                          <TableCell>
-                            {administradora.logo_url ? (
-                              <img 
-                                src={administradora.logo_url} 
-                                alt={administradora.nome} 
-                                className="h-8 object-contain"
-                              />
-                            ) : (
-                              "-"
-                            )}
-                          </TableCell>
-                          <TableCell>
-                            <StatusBadge variant={administradora.status ? "success" : "danger"}>
-                              {administradora.status ? "Ativa" : "Inativa"}
-                            </StatusBadge>
-                          </TableCell>
-                          <TableCell className="text-right">
-                            <Button 
-                              variant="outline" 
-                              size="icon" 
-                              className="mr-2"
-                              onClick={() => handleOpenEditDialog(administradora)}
-                            >
-                              <Edit className="h-4 w-4" />
-                            </Button>
-                            <Button 
-                              variant="outline" 
-                              size="icon"
-                              className="text-destructive" 
-                              onClick={() => handleConfirmDelete(administradora)}
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </TableCell>
-                        </TableRow>
-                      ))
-                    ) : (
-                      <TableRow>
-                        <TableCell colSpan={4} className="text-center py-6">
-                          {searchTerm ? "Nenhuma administradora encontrada para a busca." : "Nenhuma administradora cadastrada."}
-                        </TableCell>
-                      </TableRow>
-                    )}
-                  </TableBody>
-                </Table>
-              )}
-            </div>
+    <>
+      <div className="p-6">
+        <div className="mb-6 flex flex-col md:flex-row md:items-center md:justify-between">
+          <div>
+            <h2 className="text-2xl font-bold text-gray-800">Administradoras</h2>
+            <p className="text-gray-600">Gerencie as administradoras de planos disponíveis no sistema</p>
           </div>
-        </main>
+          <div className="mt-4 md:mt-0 flex flex-col md:flex-row items-start md:items-center gap-2">
+            <div className="relative w-full md:w-auto">
+              <Search className="absolute left-3 top-2.5 h-4 w-4 text-gray-400" />
+              <Input 
+                placeholder="Buscar administradora..."
+                className="pl-10"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+              />
+            </div>
+            <Button className="w-full md:w-auto" onClick={handleOpenCreateDialog}>
+              <Plus className="h-4 w-4 mr-2" />
+              <span>Nova Administradora</span>
+            </Button>
+          </div>
+        </div>
+
+        {/* Tabela de Administradoras */}
+        <div className="bg-white rounded-lg shadow overflow-hidden">
+          {isLoading ? (
+            <div className="text-center py-10">
+              <div className="spinner h-8 w-8 mx-auto border-4 border-primary border-r-transparent rounded-full animate-spin mb-4"></div>
+              <p>Carregando administradoras...</p>
+            </div>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Nome da Administradora</TableHead>
+                  <TableHead>Logo</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead className="text-right">Ações</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {administradoras && administradoras.length > 0 ? (
+                  administradoras.map(administradora => (
+                    <TableRow key={administradora.id}>
+                      <TableCell className="font-medium">{administradora.nome}</TableCell>
+                      <TableCell>
+                        {administradora.logo_url ? (
+                          <img 
+                            src={administradora.logo_url} 
+                            alt={administradora.nome} 
+                            className="h-8 object-contain"
+                          />
+                        ) : (
+                          "-"
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        <StatusBadge variant={administradora.status ? "success" : "danger"}>
+                          {administradora.status ? "Ativa" : "Inativa"}
+                        </StatusBadge>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <Button 
+                          variant="outline" 
+                          size="icon" 
+                          className="mr-2"
+                          onClick={() => handleOpenEditDialog(administradora)}
+                        >
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                        <Button 
+                          variant="outline" 
+                          size="icon"
+                          className="text-destructive" 
+                          onClick={() => handleConfirmDelete(administradora)}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                ) : (
+                  <TableRow>
+                    <TableCell colSpan={4} className="text-center py-6">
+                      {searchTerm ? "Nenhuma administradora encontrada para a busca." : "Nenhuma administradora cadastrada."}
+                    </TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          )}
+        </div>
       </div>
 
       {/* Diálogo de Criação/Edição */}
@@ -293,6 +287,6 @@ export default function Administradoras() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </div>
+    </>
   );
 }

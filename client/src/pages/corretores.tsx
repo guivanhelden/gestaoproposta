@@ -7,8 +7,9 @@ import supabase from "../lib/supabase";
 // Importar o novo componente de formulário
 import CorretorForm, { Corretor } from "@/components/corretores/corretor-form";
 
-import Header from "@/components/layout/header";
-import Sidebar from "@/components/layout/sidebar";
+// Remover imports de Header e Sidebar
+// import Header from "@/components/layout/header";
+// import Sidebar from "@/components/layout/sidebar";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { Button } from "@/components/ui/button";
 import { 
@@ -191,124 +192,117 @@ export default function Corretores() {
     setDeleteDialogOpen(true);
   };
 
+  // Remover a estrutura externa de div/Header/Sidebar/main
   return (
-    <div className="min-h-screen w-full flex flex-col">
-      <Header />
-      
-      <div className="flex flex-1 overflow-hidden">
-        <Sidebar />
-        
-        <main className="flex-1 overflow-y-auto">
-          <div className="p-6">
-            <div className="mb-6 flex flex-col md:flex-row md:items-center md:justify-between">
-              <div>
-                <h2 className="text-2xl font-bold text-gray-800">Corretores</h2>
-                <p className="text-gray-600">Gerencie os corretores do sistema</p>
-              </div>
-              <div className="mt-4 md:mt-0 flex flex-col md:flex-row items-start md:items-center gap-2">
-                <div className="relative w-full md:w-auto">
-                  <Search className="absolute left-3 top-2.5 h-4 w-4 text-gray-400" />
-                  <Input 
-                    placeholder="Buscar corretor..."
-                    className="pl-10"
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                  />
-                </div>
-                <Button className="w-full md:w-auto" onClick={handleOpenCreateDialog}>
-                  <Plus className="h-4 w-4 mr-2" />
-                  <span>Novo Corretor</span>
-                </Button>
-              </div>
+    <>
+      <div className="p-6">
+        <div className="mb-6 flex flex-col md:flex-row md:items-center md:justify-between">
+          <div>
+            <h2 className="text-2xl font-bold text-gray-800">Corretores</h2>
+            <p className="text-gray-600">Gerencie os corretores do sistema</p>
+          </div>
+          <div className="mt-4 md:mt-0 flex flex-col md:flex-row items-start md:items-center gap-2">
+            <div className="relative w-full md:w-auto">
+              <Search className="absolute left-3 top-2.5 h-4 w-4 text-gray-400" />
+              <Input 
+                placeholder="Buscar corretor..."
+                className="pl-10"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+              />
             </div>
+            <Button className="w-full md:w-auto" onClick={handleOpenCreateDialog}>
+              <Plus className="h-4 w-4 mr-2" />
+              <span>Novo Corretor</span>
+            </Button>
+          </div>
+        </div>
 
-            {/* Tabela de Corretores */}
-            <div className="bg-white rounded-lg shadow overflow-hidden">
-              {isLoading ? (
-                <div className="p-10 text-center">Carregando corretores...</div>
-              ) : error ? (
-                <div className="p-10 text-center text-red-500">
-                  Erro ao carregar corretores: {(error as Error).message}
-                </div>
-              ) : !corretores || corretores.length === 0 ? (
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Nome</TableHead>
-                      <TableHead>E-mail</TableHead>
-                      <TableHead>Equipe</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead className="text-right">Ações</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    <TableRow>
-                      <TableCell colSpan={5} className="text-center">
-                        {searchTerm ? "Nenhum corretor encontrado para a busca." : "Nenhum corretor cadastrado."}
+        {/* Tabela de Corretores */}
+        <div className="bg-white rounded-lg shadow overflow-hidden">
+          {isLoading ? (
+            <div className="p-10 text-center">Carregando corretores...</div>
+          ) : error ? (
+            <div className="p-10 text-center text-red-500">
+              Erro ao carregar corretores: {(error as Error).message}
+            </div>
+          ) : !corretores || corretores.length === 0 ? (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Nome</TableHead>
+                  <TableHead>E-mail</TableHead>
+                  <TableHead>Equipe</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead className="text-right">Ações</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                <TableRow>
+                  <TableCell colSpan={5} className="text-center">
+                    {searchTerm ? "Nenhum corretor encontrado para a busca." : "Nenhum corretor cadastrado."}
+                  </TableCell>
+                </TableRow>
+              </TableBody>
+            </Table>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Nome</TableHead>
+                  <TableHead>E-mail</TableHead>
+                  <TableHead>Equipe</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead className="text-right">Ações</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {corretores && corretores.length > 0 ? (
+                  corretores.map((corretor) => (
+                    <TableRow key={corretor.id}>
+                      <TableCell className="font-medium">{corretor.name}</TableCell>
+                      <TableCell>{corretor.email_corretor || "-"}</TableCell>
+                      <TableCell>
+                        {/* Debug equipe_id */}
+                        <div className="text-xs text-gray-500 mb-1">ID: {corretor.equipe_id || 'Nenhum'}</div>
+                        {getNomeEquipe(corretor.equipe_id)}
+                      </TableCell>
+                      <TableCell>
+                        <StatusBadge variant={corretor.ativo ? "success" : "danger"}>
+                          {corretor.ativo ? "Ativo" : "Inativo"}
+                        </StatusBadge>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <Button 
+                          variant="outline" 
+                          size="icon" 
+                          className="mr-2"
+                          onClick={() => handleOpenEditDialog(corretor)}
+                        >
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                        <Button 
+                          variant="outline" 
+                          size="icon"
+                          className="text-destructive" 
+                          onClick={() => handleConfirmDelete(corretor)}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
                       </TableCell>
                     </TableRow>
-                  </TableBody>
-                </Table>
-              ) : (
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Nome</TableHead>
-                      <TableHead>E-mail</TableHead>
-                      <TableHead>Equipe</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead className="text-right">Ações</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {corretores && corretores.length > 0 ? (
-                      corretores.map((corretor) => (
-                        <TableRow key={corretor.id}>
-                          <TableCell className="font-medium">{corretor.name}</TableCell>
-                          <TableCell>{corretor.email_corretor || "-"}</TableCell>
-                          <TableCell>
-                            {/* Debug equipe_id */}
-                            <div className="text-xs text-gray-500 mb-1">ID: {corretor.equipe_id || 'Nenhum'}</div>
-                            {getNomeEquipe(corretor.equipe_id)}
-                          </TableCell>
-                          <TableCell>
-                            <StatusBadge variant={corretor.ativo ? "success" : "danger"}>
-                              {corretor.ativo ? "Ativo" : "Inativo"}
-                            </StatusBadge>
-                          </TableCell>
-                          <TableCell className="text-right">
-                            <Button 
-                              variant="outline" 
-                              size="icon" 
-                              className="mr-2"
-                              onClick={() => handleOpenEditDialog(corretor)}
-                            >
-                              <Edit className="h-4 w-4" />
-                            </Button>
-                            <Button 
-                              variant="outline" 
-                              size="icon"
-                              className="text-destructive" 
-                              onClick={() => handleConfirmDelete(corretor)}
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </TableCell>
-                        </TableRow>
-                      ))
-                    ) : (
-                      <TableRow>
-                        <TableCell colSpan={5} className="text-center py-6">
-                          Nenhum corretor encontrado.
-                        </TableCell>
-                      </TableRow>
-                    )}
-                  </TableBody>
-                </Table>
-              )}
-            </div>
-          </div>
-        </main>
+                  ))
+                ) : (
+                  <TableRow>
+                    <TableCell colSpan={5} className="text-center py-6">
+                      Nenhum corretor encontrado.
+                    </TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          )}
+        </div>
       </div>
 
       {/* Diálogo de Criação/Edição */}
@@ -362,6 +356,6 @@ export default function Corretores() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </div>
+    </>
   );
 }

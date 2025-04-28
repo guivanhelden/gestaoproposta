@@ -2,10 +2,9 @@ import { useState, useEffect } from "react";
 import { useParams } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import supabase from "@/lib/supabase";
-import Header from "@/components/layout/header";
-import Sidebar from "@/components/layout/sidebar";
 import KanbanBoardSupabase from "@/components/kanban/board-supabase";
 import CardModalSupabase from "@/components/kanban/card-modal-supabase";
+import NovaPropostaModal from "@/components/kanban/nova-proposta-modal";
 import { KanbanCard } from "@/hooks/use-kanban-cards";
 import { useKanbanBoards } from "@/hooks/use-kanban-boards";
 import { useKanbanStages } from "@/hooks/use-kanban-stages";
@@ -34,7 +33,7 @@ import {
   FormMessage 
 } from "@/components/ui/form";
 import { Textarea } from "@/components/ui/textarea";
-import { PlusCircle, Search, AlertCircle, Plus, Columns } from "lucide-react";
+import { PlusCircle, Search, AlertCircle, Plus, Columns, FilePlus } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 
 // Esquema de validação para novo cartão
@@ -60,8 +59,9 @@ export default function VisualizarQuadro() {
   const [searchTerm, setSearchTerm] = useState("");
   const [createCardModalOpen, setCreateCardModalOpen] = useState(false);
   const [createStageModalOpen, setCreateStageModalOpen] = useState(false);
-  const [selectedCard, setSelectedCard] = useState<KanbanCard | null>(null);
-  const [modalOpen, setModalOpen] = useState(false);
+  const [selectedCardId, setSelectedCardId] = useState<string | null>(null);
+  const [selectedCardData, setSelectedCardData] = useState<KanbanCard | null>(null);
+  const [novaPropostaModalOpen, setNovaPropostaModalOpen] = useState(false);
 
   // Carregar dados do quadro
   const { 
@@ -119,10 +119,10 @@ export default function VisualizarQuadro() {
 
   // Atualizar o valor padrão do estágio quando os estágios forem carregados
   useEffect(() => {
-    if (stages && stages.length > 0) {
+    if (stages && stages.length > 0 && !cardForm.getValues('stage_id')) {
       cardForm.setValue("stage_id", stages[0].id);
     }
-  }, [stages]);
+  }, [stages, cardForm]);
 
   // Formulário para novo estágio
   const stageForm = useForm<z.infer<typeof newStageSchema>>({
@@ -171,7 +171,7 @@ export default function VisualizarQuadro() {
     createStage({
       title: data.title,
       board_id: id,
-      position: 0
+      position: (stages?.length || 0) // Adiciona ao final por padrão
     }, {
       onSuccess: () => {
         toast({
@@ -192,94 +192,87 @@ export default function VisualizarQuadro() {
   };
 
   const handleOpenModal = (card: KanbanCard) => {
-    setSelectedCard(card);
-    setModalOpen(true);
+    setSelectedCardId(card.id);
+    setSelectedCardData(card);
   };
 
   const handleCloseModal = () => {
-    setModalOpen(false);
-    setSelectedCard(null);
+    setSelectedCardId(null);
+    setSelectedCardData(null);
   };
 
+  // Retorna apenas o conteúdo da página, que será renderizado dentro do <main> do MainLayout
   return (
-    <div className="min-h-screen w-full flex flex-col">
-      <Header />
-      
-      <div className="flex flex-1 overflow-hidden">
-        <Sidebar />
-        
-        <main className="flex-1 overflow-y-auto">
-          <div className="p-6">
-            <div className="mb-6 flex flex-col md:flex-row md:items-center md:justify-between">
-              <div>
-                {isLoading ? (
-                  <Skeleton className="h-8 w-64 mb-2" />
-                ) : (
-                  <>
-                    <h2 className="text-2xl font-bold text-gray-800">{board?.title || "Quadro Kanban"}</h2>
-                    <p className="text-gray-600">{board?.description || "Sem descrição"}</p>
-                  </>
-                )}
-              </div>
-              
-              <div className="mt-4 md:mt-0 flex flex-col md:flex-row items-start md:items-center gap-2">
-                <div className="relative w-full md:w-auto">
-                  <Search className="absolute left-3 top-2.5 h-4 w-4 text-gray-400" />
-                  <Input 
-                    placeholder="Buscar cartão..."
-                    className="pl-10"
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                  />
-                </div>
-                
-                <Button variant="outline" onClick={() => setCreateStageModalOpen(true)}>
-                  <Columns className="h-4 w-4 mr-2" />
-                  <span>Novo Estágio</span>
-                </Button>
-                
-                <Button onClick={() => setCreateCardModalOpen(true)}>
-                  <PlusCircle className="h-4 w-4 mr-2" />
-                  <span>Novo Cartão</span>
-                </Button>
-              </div>
-            </div>
-
-            {/* Erro */}
-            {error && (
-              <div className="bg-red-50 border border-red-200 rounded-lg p-4 flex items-start mb-6">
-                <AlertCircle className="h-5 w-5 text-red-500 mr-2 mt-0.5" />
-                <div>
-                  <h3 className="text-red-800 font-medium">Erro ao carregar o quadro</h3>
-                  <p className="text-red-600 text-sm">
-                    {error instanceof Error ? error.message : 'Ocorreu um erro desconhecido'}
-                  </p>
-                </div>
-              </div>
-            )}
-
-            {/* Quadro Kanban */}
-            {isLoading ? (
-              <div className="text-center py-20">
-                <div className="spinner h-8 w-8 mx-auto border-4 border-primary border-r-transparent rounded-full animate-spin mb-4"></div>
-                <p>Carregando quadro...</p>
-              </div>
+    <>
+      <div className="p-6">
+        <div className="mb-6 flex flex-col md:flex-row md:items-center md:justify-between">
+          <div>
+            {isLoading && !error ? (
+              <Skeleton className="h-8 w-64 mb-2" />
             ) : (
-              <KanbanBoardSupabase 
-                boardId={id || ""} 
-                onCardClick={handleOpenModal}
-              />
+              <>
+                <h2 className="text-2xl font-bold text-gray-800">{board?.title || "Quadro Kanban"}</h2>
+                <p className="text-gray-600">{board?.description || "Sem descrição"}</p>
+              </>
             )}
           </div>
-        </main>
+          
+          <div className="mt-4 md:mt-0 flex flex-col md:flex-row items-start md:items-center gap-2 flex-wrap">
+            <div className="relative w-full md:w-auto">
+              <Search className="absolute left-3 top-2.5 h-4 w-4 text-gray-400" />
+              <Input 
+                placeholder="Buscar cartão..."
+                className="pl-10"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+              />
+            </div>
+            
+            <Button variant="outline" onClick={() => setCreateStageModalOpen(true)} disabled={isLoading}>
+              <Columns className="h-4 w-4 mr-2" />
+              <span>Novo Estágio</span>
+            </Button>
+            
+            <Button onClick={() => setNovaPropostaModalOpen(true)} disabled={isLoading}>
+              <FilePlus className="h-4 w-4 mr-2" />
+              <span>Nova Proposta</span>
+            </Button>
+          </div>
+        </div>
+
+        {/* Erro */}
+        {error && !isLoading && (
+          <div className="bg-red-50 border border-red-200 rounded-lg p-4 flex items-start mb-6">
+            <AlertCircle className="h-5 w-5 text-red-500 mr-2 mt-0.5" />
+            <div>
+              <h3 className="text-red-800 font-medium">Erro ao carregar o quadro</h3>
+              <p className="text-red-600 text-sm">
+                {error instanceof Error ? error.message : 'Ocorreu um erro desconhecido'}
+              </p>
+            </div>
+          </div>
+        )}
+
+        {/* Quadro Kanban */}
+        {isLoading ? (
+          <div className="text-center py-20">
+            <div className="spinner h-8 w-8 mx-auto border-4 border-primary border-r-transparent rounded-full animate-spin mb-4"></div>
+            <p>Carregando quadro...</p>
+          </div>
+        ) : (
+          <KanbanBoardSupabase 
+            boardId={id || ""} 
+            onCardClick={handleOpenModal}
+          />
+        )}
       </div>
 
-      {/* Modal de Cartão */}
-      {selectedCard && id && (
+      {/* Modal de Cartão: Usar selectedCardData para controlar */}
+      {selectedCardData && id && (
         <CardModalSupabase 
-          isOpen={modalOpen} 
+          isOpen={!!selectedCardData}
           onClose={handleCloseModal}
-          card={selectedCard}
+          card={selectedCardData}
           boardId={id}
         />
       )}
@@ -360,14 +353,14 @@ export default function VisualizarQuadro() {
                   name="stage_id"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Estágio</FormLabel>
+                      <FormLabel>Estágio Inicial</FormLabel>
                       <select
                         className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                         value={field.value}
                         onChange={field.onChange}
                       >
                         {!stages || stages.length === 0 ? (
-                          <option value="">Nenhum estágio disponível</option>
+                          <option value="">Carregando estágios...</option>
                         ) : (
                           stages.map(stage => (
                             <option key={stage.id} value={stage.id}>
@@ -404,7 +397,9 @@ export default function VisualizarQuadro() {
                 <Button type="button" variant="outline" onClick={() => setCreateCardModalOpen(false)}>
                   Cancelar
                 </Button>
-                <Button type="submit">Criar Cartão</Button>
+                <Button type="submit" disabled={cardForm.formState.isSubmitting || isLoading || !stages || stages.length === 0}>
+                  {cardForm.formState.isSubmitting ? "Criando..." : "Criar Cartão"}
+                </Button>
               </DialogFooter>
             </form>
           </Form>
@@ -441,12 +436,23 @@ export default function VisualizarQuadro() {
                 <Button type="button" variant="outline" onClick={() => setCreateStageModalOpen(false)}>
                   Cancelar
                 </Button>
-                <Button type="submit">Criar Estágio</Button>
+                <Button type="submit" disabled={stageForm.formState.isSubmitting || isLoading}>
+                  {stageForm.formState.isSubmitting ? "Criando..." : "Criar Estágio"}
+                </Button>
               </DialogFooter>
             </form>
           </Form>
         </DialogContent>
       </Dialog>
-    </div>
+
+      {/* 4. Renderizar o Novo Modal de Proposta */}
+      {id && (
+        <NovaPropostaModal
+          isOpen={novaPropostaModalOpen}
+          onClose={() => setNovaPropostaModalOpen(false)}
+          boardId={id}
+        />
+      )}
+    </>
   );
 } 

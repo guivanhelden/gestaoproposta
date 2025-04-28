@@ -7,8 +7,9 @@ import supabase from "../lib/supabase";
 // Importar o novo componente de formulário
 import OperadoraForm, { Operator } from "@/components/operadoras/operadora-form";
 
-import Header from "@/components/layout/header";
-import Sidebar from "@/components/layout/sidebar";
+// Remover imports de Header e Sidebar
+// import Header from "@/components/layout/header";
+// import Sidebar from "@/components/layout/sidebar";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -106,114 +107,107 @@ export default function Operadoras() {
     setDeleteDialogOpen(true);
   };
 
+  // Remover a estrutura externa de div/Header/Sidebar/main
   return (
-    <div className="min-h-screen w-full flex flex-col">
-      <Header />
-      
-      <div className="flex flex-1 overflow-hidden">
-        <Sidebar />
-        
-        <main className="flex-1 overflow-y-auto">
-          <div className="p-6">
-            <div className="mb-6 flex flex-col md:flex-row md:items-center md:justify-between">
-              <div>
-                <h2 className="text-2xl font-bold text-gray-800">Operadoras</h2>
-                <p className="text-gray-600">Gerencie as operadoras de saúde disponíveis no sistema</p>
-              </div>
-              <div className="mt-4 md:mt-0 flex flex-col md:flex-row items-start md:items-center gap-2">
-                <div className="relative w-full md:w-auto">
-                  <Search className="absolute left-3 top-2.5 h-4 w-4 text-gray-400" />
-                  <Input 
-                    placeholder="Buscar operadora..."
-                    className="pl-10"
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                  />
-                </div>
-                <Button className="w-full md:w-auto" onClick={handleOpenCreateDialog}>
-                  <Plus className="h-4 w-4 mr-2" />
-                  <span>Nova Operadora</span>
-                </Button>
-              </div>
-            </div>
-
-            {/* Tabela de Operadoras */}
-            <div className="bg-white rounded-lg shadow overflow-hidden">
-              {isLoading ? (
-                <div className="text-center py-10">
-                  <div className="spinner h-8 w-8 mx-auto border-4 border-primary border-r-transparent rounded-full animate-spin mb-4"></div>
-                  <p>Carregando operadoras...</p>
-                </div>
-              ) : (
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Nome da Operadora</TableHead>
-                      <TableHead>Categoria</TableHead>
-                      <TableHead>ID SIX</TableHead>
-                      <TableHead>Gestor</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead className="text-right">Ações</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {operators && operators.length > 0 ? (
-                      operators.map((operator) => (
-                        <TableRow key={operator.id}>
-                          <TableCell className="font-medium">
-                            <div className="flex items-center gap-2">
-                              {operator.logo_url && (
-                                <img 
-                                  src={operator.logo_url} 
-                                  alt={operator.name} 
-                                  className="h-16 w-16 rounded-sm object-contain"
-                                />
-                              )}
-                              {operator.name}
-                            </div>
-                          </TableCell>
-                          <TableCell>{operator.categoria || "-"}</TableCell>
-                          <TableCell>{operator.id_six || "-"}</TableCell>
-                          <TableCell>{operator.gestor || "-"}</TableCell>
-                          <TableCell>
-                            <StatusBadge variant={operator.active ? "success" : "danger"}>
-                              {operator.active ? "Ativa" : "Inativa"}
-                            </StatusBadge>
-                          </TableCell>
-                          <TableCell className="text-right">
-                            <Button 
-                              variant="ghost" 
-                              size="sm"
-                              onClick={() => handleOpenEditDialog(operator)}
-                            >
-                              <Edit className="h-4 w-4 mr-1" />
-                              Editar
-                            </Button>
-                            <Button 
-                              variant="ghost" 
-                              size="sm"
-                              className="text-red-500 hover:text-red-700 hover:bg-red-50"
-                              onClick={() => handleConfirmDelete(operator)}
-                            >
-                              <Trash2 className="h-4 w-4 mr-1" />
-                              Excluir
-                            </Button>
-                          </TableCell>
-                        </TableRow>
-                      ))
-                    ) : (
-                      <TableRow>
-                        <TableCell colSpan={6} className="text-center py-6">
-                          {searchTerm ? "Nenhuma operadora encontrada para a busca." : "Nenhuma operadora cadastrada."}
-                        </TableCell>
-                      </TableRow>
-                    )}
-                  </TableBody>
-                </Table>
-              )}
-            </div>
+    <>
+      <div className="p-6">
+        <div className="mb-6 flex flex-col md:flex-row md:items-center md:justify-between">
+          <div>
+            <h2 className="text-2xl font-bold text-gray-800">Operadoras</h2>
+            <p className="text-gray-600">Gerencie as operadoras de saúde disponíveis no sistema</p>
           </div>
-        </main>
+          <div className="mt-4 md:mt-0 flex flex-col md:flex-row items-start md:items-center gap-2">
+            <div className="relative w-full md:w-auto">
+              <Search className="absolute left-3 top-2.5 h-4 w-4 text-gray-400" />
+              <Input 
+                placeholder="Buscar operadora..."
+                className="pl-10"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+              />
+            </div>
+            <Button className="w-full md:w-auto" onClick={handleOpenCreateDialog}>
+              <Plus className="h-4 w-4 mr-2" />
+              <span>Nova Operadora</span>
+            </Button>
+          </div>
+        </div>
+
+        {/* Tabela de Operadoras */}
+        <div className="bg-white rounded-lg shadow overflow-hidden">
+          {isLoading ? (
+            <div className="text-center py-10">
+              <div className="spinner h-8 w-8 mx-auto border-4 border-primary border-r-transparent rounded-full animate-spin mb-4"></div>
+              <p>Carregando operadoras...</p>
+            </div>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Nome da Operadora</TableHead>
+                  <TableHead>Categoria</TableHead>
+                  <TableHead>ID SIX</TableHead>
+                  <TableHead>Gestor</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead className="text-right">Ações</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {operators && operators.length > 0 ? (
+                  operators.map((operator) => (
+                    <TableRow key={operator.id}>
+                      <TableCell className="font-medium">
+                        <div className="flex items-center gap-2">
+                          {operator.logo_url && (
+                            <img 
+                              src={operator.logo_url} 
+                              alt={operator.name} 
+                              className="h-16 w-16 rounded-sm object-contain"
+                            />
+                          )}
+                          {operator.name}
+                        </div>
+                      </TableCell>
+                      <TableCell>{operator.categoria || "-"}</TableCell>
+                      <TableCell>{operator.id_six || "-"}</TableCell>
+                      <TableCell>{operator.gestor || "-"}</TableCell>
+                      <TableCell>
+                        <StatusBadge variant={operator.active ? "success" : "danger"}>
+                          {operator.active ? "Ativa" : "Inativa"}
+                        </StatusBadge>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <Button 
+                          variant="ghost" 
+                          size="sm"
+                          onClick={() => handleOpenEditDialog(operator)}
+                        >
+                          <Edit className="h-4 w-4 mr-1" />
+                          Editar
+                        </Button>
+                        <Button 
+                          variant="ghost" 
+                          size="sm"
+                          className="text-red-500 hover:text-red-700 hover:bg-red-50"
+                          onClick={() => handleConfirmDelete(operator)}
+                        >
+                          <Trash2 className="h-4 w-4 mr-1" />
+                          Excluir
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                ) : (
+                  <TableRow>
+                    <TableCell colSpan={6} className="text-center py-6">
+                      {searchTerm ? "Nenhuma operadora encontrada para a busca." : "Nenhuma operadora cadastrada."}
+                    </TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          )}
+        </div>
       </div>
 
       {/* Diálogo de Criação/Edição */}
@@ -266,6 +260,6 @@ export default function Operadoras() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </div>
+    </>
   );
 }

@@ -6,6 +6,7 @@ import { cn } from "@/lib/utils";
 import {
   Bell,
   Menu,
+  PanelLeft,
   ChevronDown,
   LogOut,
   User,
@@ -27,9 +28,10 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 type HeaderProps = {
   toggleSidebar?: () => void;
+  isSidebarCollapsed?: boolean;
 };
 
-export default function Header({ toggleSidebar }: HeaderProps) {
+export default function Header({ toggleSidebar, isSidebarCollapsed }: HeaderProps) {
   const [, navigate] = useLocation();
   const { user, logout } = useAuth();
   const [isOpen, setIsOpen] = useState(false);
@@ -57,9 +59,13 @@ export default function Header({ toggleSidebar }: HeaderProps) {
             variant="ghost" 
             size="icon"
             onClick={toggleSidebar}
-            className="text-gray-500 hover:text-primary mr-2"
+            className={cn(
+              "text-gray-500 hover:text-primary mr-2 transition-all",
+              isSidebarCollapsed && "bg-primary/10"
+            )}
+            title={isSidebarCollapsed ? "Expandir menu" : "Recolher menu"}
           >
-            <Menu className="h-5 w-5" />
+            <PanelLeft className="h-5 w-5" />
           </Button>
           
           <div className="flex items-center">

@@ -51,141 +51,145 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       console.log("Buscando dados do usuário:", userId);
       
+      // Verificar se existe cache local para evitar chamadas desnecessárias
+      const cacheKey = `user_data_${userId}`;
+      const cachedData = localStorage.getItem(cacheKey);
+      
+      // Se o cache for válido, use-o (válido por 10 minutos = 600000ms)
+      if (cachedData) {
+        try {
+          const parsedCache = JSON.parse(cachedData);
+          const cacheTime = parsedCache.timestamp || 0;
+          const now = Date.now();
+          const cacheAge = now - cacheTime;
+          
+          if (cacheAge < 600000) { // 10 minutos
+            console.log("Usando dados em cache para usuário:", userId);
+            return parsedCache.data;
+          }
+          console.log("Cache expirado, buscando dados frescos");
+        } catch (e) {
+          console.warn("Erro ao parsear cache:", e);
+        }
+      }
+      
       // Timeout para evitar travamentos indefinidos
       const timeoutPromise = new Promise<null>((_, reject) => {
-        setTimeout(() => reject(new Error("Tempo limite excedido ao buscar dados do usuário")), 15000);
+        setTimeout(() => reject(new Error("Tempo limite excedido ao buscar dados do usuário")), 5000);
       });
       
       // Função principal para buscar dados
       const fetchDataPromise = async (): Promise<UserWithRoles | null> => {
-        // Verificar se o perfil existe antes de buscar
-        console.log("Verificando se o perfil existe...");
-        const { count, error: countError } = await supabase
-          .from('profiles')
-          .select('*', { count: 'exact', head: true })
-          .eq('id', userId);
-        
-        if (countError) {
-          console.error("Erro ao verificar perfil:", countError);
-          console.error("Detalhes completos do erro:", JSON.stringify(countError));
-          throw countError;
-        }
-        
-        console.log(`Encontrados ${count} perfis para o ID ${userId}`);
-        
-        // Se o perfil não existir, crie um
-        if (!count || count === 0) {
-          console.log("Perfil não encontrado, tentando criar um perfil básico...");
-          
-          // Buscar informações básicas do usuário
-          const { data: userData, error: userError } = await supabase.auth.getUser();
-          
-          if (userError) {
-            console.error("Erro ao buscar dados do usuário:", userError);
-            throw userError;
-          }
-          
-          // Criar um perfil básico
-          const { data: newProfile, error: insertError } = await supabase
+        // Buscar perfil e papéis em paralelo
+        console.log("Iniciando busca paralela de perfil e papéis...");
+        const [profileResult, rolesResult] = await Promise.all([
+          supabase
             .from('profiles')
-            .insert([
-              {
-                id: userId,
-                name: userData.user.user_metadata?.name || userData.user.email?.split('@')[0] || 'Usuário',
-                email: userData.user.email || null,
-                created_at: new Date().toISOString(),
-                updated_at: new Date().toISOString()
-              }
-            ])
             .select('*')
-            .single();
-            
-          if (insertError) {
-            console.error("Erro ao criar perfil:", insertError);
-            console.error("Detalhes completos do erro:", JSON.stringify(insertError));
-            
-            // Se não conseguir criar o perfil, vamos tentar continuar com os dados básicos
-            console.log("Tentando continuar com dados básicos do usuário...");
-            
-            const basicProfile: UserWithRoles = {
-              id: userId,
-              name: userData.user.user_metadata?.name || userData.user.email?.split('@')[0] || 'Usuário',
-              email: userData.user.email || null,
-              avatar_url: null,
-              created_at: new Date().toISOString(),
-              updated_at: new Date().toISOString(),
-              roles: ['corretor'] // Papel padrão
-            };
-            
-            console.log("Usando perfil básico:", basicProfile);
-            return basicProfile;
-          }
-          
-          console.log("Perfil criado com sucesso:", newProfile);
-          
-          // Adicionar papel padrão (corretor)
-          console.log("Adicionando papel padrão (corretor)...");
-          const { error: roleError } = await supabase
+            .eq('id', userId)
+            .single(),
+          supabase
             .from('user_roles')
-            .insert([
-              {
-                user_id: userId,
-                role: 'corretor'
-              }
-            ]);
-            
-          if (roleError) {
-            console.error("Erro ao adicionar papel:", roleError);
-            console.error("Detalhes completos do erro:", JSON.stringify(roleError));
-          }
-        }
-        
-        // Buscar perfil do usuário
-        console.log("Buscando perfil do usuário...");
-        const { data: profile, error: profileError } = await supabase
-          .from('profiles')
-          .select('*')
-          .eq('id', userId)
-          .single();
-        
+            .select('role')
+            .eq('user_id', userId)
+        ]);
+
+        console.log("Resultados das buscas paralelas recebidos.");
+
+        // --- Tratamento do resultado do Perfil ---
+        let profile = profileResult.data;
+        const profileError = profileResult.error;
+
         if (profileError) {
-          console.error("Erro ao buscar perfil:", profileError);
-          console.error("Detalhes completos do erro:", JSON.stringify(profileError));
-          throw profileError;
+          // Se o erro for "PGRST116" (nenhuma linha encontrada), tentamos criar o perfil
+          if (profileError.code === 'PGRST116') { 
+            console.log("Perfil não encontrado (PGRST116), tentando criar um perfil básico...");
+            try {
+              const { data: userData, error: userError } = await supabase.auth.getUser();
+              if (userError) throw userError;
+
+              const { data: newProfile, error: insertError } = await supabase
+                .from('profiles')
+                .insert([
+                  {
+                    id: userId,
+                    name: userData.user.user_metadata?.name || userData.user.email?.split('@')[0] || 'Usuário',
+                    email: userData.user.email || null,
+                    created_at: new Date().toISOString(),
+                    updated_at: new Date().toISOString()
+                  }
+                ])
+                .select('*')
+                .single();
+
+              if (insertError) throw insertError;
+
+              console.log("Perfil criado com sucesso:", newProfile);
+              profile = newProfile; // Usar o perfil recém-criado
+
+              // Adicionar papel padrão (corretor) para o novo perfil
+              console.log("Adicionando papel padrão (corretor)...");
+              const { error: roleInsertError } = await supabase
+                .from('user_roles')
+                .insert([{ user_id: userId, role: 'corretor' }]);
+
+              if (roleInsertError) {
+                console.error("Erro ao adicionar papel:", roleInsertError);
+                // Não lançar erro aqui, podemos continuar sem o papel padrão se necessário
+              }
+
+            } catch (creationError) {
+              console.error("Erro ao criar perfil ou buscar usuário:", creationError);
+              console.error("Detalhes completos do erro:", JSON.stringify(creationError));
+              // Se a criação falhar, lançamos o erro original da busca para o catch externo
+              throw profileError; 
+            }
+          } else {
+            // Se for outro erro na busca de perfil, lançamos ele
+            console.error("Erro ao buscar perfil:", profileError);
+            console.error("Detalhes completos do erro:", JSON.stringify(profileError));
+            throw profileError;
+          }
+        } else {
+           console.log("Perfil encontrado:", profile);
         }
-        
-        console.log("Perfil encontrado:", profile);
-        
-        // Buscar papéis do usuário
-        console.log("Buscando papéis do usuário...");
-        const { data: userRoles, error: rolesError } = await supabase
-          .from('user_roles')
-          .select('role')
-          .eq('user_id', userId);
-        
+
+        // --- Tratamento do resultado dos Papéis ---
+        const userRoles = rolesResult.data;
+        const rolesError = rolesResult.error;
+
         if (rolesError) {
           console.error("Erro ao buscar papéis:", rolesError);
           console.error("Detalhes completos do erro:", JSON.stringify(rolesError));
-          
-          // Se não conseguir buscar papéis, continue com um array vazio
-          console.log("Continuando com array de papéis vazio");
+          // Se não conseguir buscar papéis, continue com um array vazio ou padrão
+          console.log("Continuando com array de papéis padrão (corretor)");
           const userWithDefaultRole: UserWithRoles = {
-            ...profile,
+            ...(profile as UserProfile), // Profile deve existir neste ponto (criado ou encontrado)
             roles: ['corretor'] // Papel padrão
           };
-          
           return userWithDefaultRole;
         }
-        
+
         console.log("Papéis encontrados:", userRoles);
-        
+
         // Combinar em um único objeto
         const userWithRoles: UserWithRoles = {
-          ...profile,
+          ...(profile as UserProfile), // Profile deve existir
           roles: userRoles?.map(r => r.role) || []
         };
-        
+
         console.log("Dados do usuário completos:", userWithRoles);
+        
+        // Salvar no cache local com timestamp
+        try {
+          localStorage.setItem(cacheKey, JSON.stringify({
+            data: userWithRoles,
+            timestamp: Date.now()
+          }));
+        } catch (e) {
+          console.warn("Erro ao salvar cache:", e);
+        }
+        
         return userWithRoles;
       };
       

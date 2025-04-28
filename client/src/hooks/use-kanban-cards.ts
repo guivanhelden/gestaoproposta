@@ -3,7 +3,11 @@ import supabase from '@/lib/supabase';
 import { Database } from '@/lib/database.types';
 import { useAuth } from '@/hooks/use-auth';
 
-export type KanbanCard = Database['public']['Tables']['kanban_cards']['Row'];
+export type KanbanCard = Database['public']['Tables']['kanban_cards']['Row'] & {
+  operators: { logo_url: string | null } | null;
+  stage: { id: string; title: string } | null;
+};
+
 export type KanbanCardInsert = Database['public']['Tables']['kanban_cards']['Insert'];
 export type KanbanCardUpdate = Database['public']['Tables']['kanban_cards']['Update'];
 
@@ -28,10 +32,13 @@ export function useKanbanCards(boardId: string) {
         .from('kanban_cards')
         .select(`
           *,
-          stage:stage_id(id, title)
+          stage:stage_id(id, title),
+          operators ( logo_url ) 
         `)
         .eq('board_id', boardId)
         .order('position', { ascending: true });
+
+      console.log("Dados brutos do Supabase:", data);
 
       if (error) throw error;
       return data;
@@ -81,21 +88,31 @@ export function useKanbanCards(boardId: string) {
   // Mutação para atualizar um cartão existente
   const updateCard = useMutation({
     mutationFn: async ({ id, ...updateData }: KanbanCardUpdate & { id: string }) => {
+      console.log("Dados recebidos para atualização (updateData):", updateData);
       const { data, error } = await supabase
         .from('kanban_cards')
         .update(updateData)
         .eq('id', id)
         .select(`
           *,
-          stage:stage_id(id, title)
+          stage:stage_id(id, title),
+          operators ( logo_url ) 
         `)
         .single();
 
       if (error) throw error;
       return data;
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['kanban-cards', boardId] });
+    onSuccess: (updatedCardData) => {
+      queryClient.setQueryData(
+          ['kanban-cards', boardId], 
+          (oldData: KanbanCard[] | undefined) => {
+             if (!oldData) return oldData;
+             return oldData.map(card => 
+                card.id === updatedCardData.id ? updatedCardData : card
+             );
+          }
+      );
     }
   });
 

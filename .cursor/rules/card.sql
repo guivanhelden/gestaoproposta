@@ -48,6 +48,31 @@ update on kanban_cards for EACH row when (
 )
 execute FUNCTION update_kanban_card_fields ();
 
+create table public.pme_submissions (
+  id uuid not null default extensions.uuid_generate_v4 (),
+  modality text not null,
+  operator_id integer not null,
+  plan_name text not null,
+  created_at timestamp with time zone null default now(),
+  updated_at timestamp with time zone null default now(),
+  status text null default 'pending'::text,
+  broker_id integer null,
+  constraint pme_submissions_pkey primary key (id),
+  constraint pme_submissions_broker_id_fkey foreign KEY (broker_id) references brokers (id),
+  constraint pme_submissions_operator_id_fkey foreign KEY (operator_id) references operators (id)
+) TABLESPACE pg_default;
+
+create index IF not exists idx_pme_submissions_status on public.pme_submissions using btree (status) TABLESPACE pg_default;
+
+create trigger set_timestamp BEFORE
+update on pme_submissions for EACH row
+execute FUNCTION trigger_set_timestamp ();
+
+create trigger trigger_after_change_submissions
+after INSERT
+or
+update on pme_submissions for EACH row
+execute FUNCTION update_related_kanban_cards ();
 
 create table public.pme_companies (
   id uuid not null default extensions.uuid_generate_v4 (),
@@ -92,7 +117,7 @@ create trigger trigger_after_change_companies
 after INSERT
 or
 update on pme_companies for EACH row
-execute FUNCTION update_related_kanban_cards ();
+execute FUNCTION eupdate_related_kanban_cards ();
 
 create table public.pme_company_partners (
   id uuid not null default extensions.uuid_generate_v4 (),
@@ -250,3 +275,39 @@ create trigger set_timestamp_pme_files BEFORE
 update on pme_files for EACH row
 execute FUNCTION trigger_set_timestamp ();
 
+create table public.brokers (
+  id integer not null,
+  name text not null,
+  equipe text null,
+  equipe_id bigint null,
+  ativo boolean null,
+  email_corretor text null,
+  telefone_corretor text null,
+  constraint brokers_pkey primary key (id),
+  constraint brokers_equipe_id_fkey foreign KEY (equipe_id) references equipe (id)
+) TABLESPACE pg_default;
+
+create trigger audit_brokers_trigger
+after INSERT
+or DELETE
+or
+update on brokers for EACH row
+execute FUNCTION audit_trigger_func ();
+
+create table public.operators (
+  id serial not null,
+  name character varying(255) not null,
+  description text null,
+  active boolean null default true,
+  created_at timestamp with time zone null default now(),
+  updated_at timestamp with time zone null default now(),
+  categoria text null,
+  logo_url text null,
+  id_six integer null,
+  gestor text null,
+  gestor_phone text null,
+  gestor_email text null,
+  url_emissao text null,
+  url_passo_passo text null,
+  constraint operators_pkey primary key (id)
+) TABLESPACE pg_default;

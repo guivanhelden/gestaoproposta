@@ -138,6 +138,7 @@ export default function KanbanBoardSupabase({ boardId, onCardClick }: KanbanBoar
           key={stage.id}
           title={stage.title}
           items={cardsByStage[stage.id] || []}
+          stageId={stage.id}
           onCardClick={onCardClick}
           stageKey={stage.id}
           onDragStart={handleDragStart}
