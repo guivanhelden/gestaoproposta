@@ -1,119 +1,241 @@
-import { useForm, useFieldArray, SubmitHandler } from 'react-hook-form';
-// import { zodResolver } from '@hookform/resolvers/zod'; // Remover zodResolver por enquanto
-import { z } from 'zod';
-import { Database } from '@/lib/database.types';
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import React, { useEffect, useState } from 'react';
+import { useForm, Controller, SubmitHandler, useFieldArray } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import * as z from 'zod';
+import { DatePicker } from '@/components/ui/date-picker';
+import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
+import { Switch } from '@/components/ui/switch';
+import { Database, Json } from '@/lib/database.types';
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { useEffect } from 'react';
+import { PlusCircle } from 'lucide-react';
 import { Trash2 } from 'lucide-react';
 
 type StageField = Database["public"]["Tables"]["kanban_stage_fields"]["Row"];
 
-// Tipos de campo suportados (pode ser expandido)
-const SUPPORTED_FIELD_TYPES = ['text', 'textarea', 'number', 'date', 'select', 'checkbox'] as const;
+const SUPPORTED_FIELD_TYPES = ['text', 'textarea', 'number', 'date', 'select', 'boolean', 'checklist'] as const;
 
-// Schema Zod atualizado para options
+const fieldTypeEnum = z.enum(SUPPORTED_FIELD_TYPES);
+
 const stageFieldSchema = z.object({
   field_name: z.string().min(1, "Nome do campo é obrigatório."),
-  field_type: z.enum(SUPPORTED_FIELD_TYPES, { required_error: "Tipo do campo é obrigatório." }),
+  field_type: fieldTypeEnum,
   is_required: z.boolean().default(false),
-  // Opções agora é um array de objetos
   options: z.array(z.object({
       label: z.string().min(1, { message: "Label não pode ser vazio."}),
       value: z.string().min(1, { message: "Value não pode ser vazio."})
-  })).optional(), // O array como um todo é opcional
+  })).optional(),
   default_value: z.string().optional(),
+  // Aceita array de objetos internamente para facilitar manipulação com useFieldArray
+  default_checklist_items: z.array(z.object({
+    id: z.string(), // ID único para react-hook-form
+    text: z.string().min(1, "O texto do item não pode ser vazio."),
+  })).optional(),
+}).superRefine((data, ctx) => {
+  if (data.field_type === 'checklist') {
+    if (data.default_value && data.default_value.trim() !== '') {
+       ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Valor Padrão não é aplicável para o tipo checklist.",
+        path: ["default_value"],
+      });
+    }
+    if (data.options && data.options.length > 0) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Opções são obrigatórias para o tipo select.",
+        path: ['options'],
+      });
+    }
+  } else if (data.field_type === 'select') {
+      if (!data.options || data.options.length === 0) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "Pelo menos uma opção é necessária para o tipo select.",
+          path: ["options"],
+        });
+      }
+      if (data.default_checklist_items && data.default_checklist_items.length > 0) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "Itens de checklist não são permitidos para o tipo select.",
+          path: ["default_checklist_items"],
+        });
+      }
+  } else {
+    if (data.options && data.options.length > 0) {
+       ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Opções não são permitidas para o tipo.",
+        path: ["options"],
+      });
+    }
+    if (data.default_checklist_items && data.default_checklist_items.length > 0) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Itens de checklist não são permitidos para o tipo.",
+        path: ["default_checklist_items"],
+      });
+    }
+  }
 });
 
-type StageFieldFormData = z.infer<typeof stageFieldSchema>;
+const stageFieldFormSchemaInternal = stageFieldSchema;
+
+type StageFieldFormDataInternal = z.infer<typeof stageFieldSchema>;
+
+type StageFieldFormDataExternal = Omit<StageFieldFormDataInternal, 'default_checklist_items'> & {
+  default_checklist_items?: string[];
+};
 
 interface StageFieldFormProps {
   stageId: string;
-  initialData?: StageField | null; // Dados para edição, null/undefined para adição
-  onSave: (data: StageFieldFormData, fieldId?: string) => Promise<void>; // Passa ID para update
+  // initialData pode ter id opcional e outros campos opcionais
+  initialData?: (Partial<Omit<StageFieldFormDataExternal, 'id'>> & { id?: string }) | null;
+  onSave: (data: StageFieldFormDataExternal, fieldId?: string) => void;
   onCancel: () => void;
-  isSaving?: boolean; // Para desabilitar botão enquanto salva
+  isSaving?: boolean;
 }
 
 export default function StageFieldForm({ stageId, initialData, onSave, onCancel, isSaving }: StageFieldFormProps) {
   
-  // Função auxiliar segura para parsear e validar as opções iniciais
   const getInitialOptions = (): Array<{label: string, value: string}> => {
-     if (!initialData?.options) return [];
-     try {
-        // Primeiro, verificar se já é um array de objetos (caso ideal)
-        if (Array.isArray(initialData.options)) {
-           const validOptions = initialData.options.filter(
-              (opt: any): opt is {label: string, value: string} => 
-                 typeof opt === 'object' && opt !== null && 
-                 typeof opt.label === 'string' && typeof opt.value === 'string'
-           );
-           if (validOptions.length === initialData.options.length) {
-               console.log("Usando initialData.options diretamente (já é array de objetos válidos)");
-               return validOptions;
-           }
-        }
-        // Se não for ou contiver inválidos, tentar parsear como JSON string
-         if (typeof initialData.options === 'string') {
-             const parsed = JSON.parse(initialData.options);
-             if (Array.isArray(parsed)) {
-                return parsed.filter(
-                    (opt: any): opt is {label: string, value: string} => 
-                        typeof opt === 'object' && opt !== null && 
-                        typeof opt.label === 'string' && typeof opt.value === 'string'
-                 );
-             }
+    if (!initialData?.options) return [];
+    try {
+      if (Array.isArray(initialData.options)) {
+         const validOptions = initialData.options.filter(
+            (opt: any): opt is {label: string, value: string} => 
+               typeof opt === 'object' && opt !== null && 
+               typeof opt.label === 'string' && typeof opt.value === 'string'
+         );
+         if (validOptions.length === initialData.options.length) {
+             console.log("Usando initialData.options diretamente (já é array de objetos válidos)");
+             return validOptions;
          }
-     } catch (e) {
-        console.error("Erro ao parsear initialData.options:", e);
-     }
-     return []; // Retorna vazio em caso de erro ou tipo inválido
+      }
+      if (typeof initialData.options === 'string') {
+         const parsed = JSON.parse(initialData.options);
+         if (Array.isArray(parsed)) {
+            return parsed.filter(
+                (opt: any): opt is {label: string, value: string} => 
+                    typeof opt === 'object' && opt !== null && 
+                    typeof opt.label === 'string' && typeof opt.value === 'string'
+             );
+         }
+      }
+    } catch (e) {
+       console.error("Erro ao parsear initialData.options:", e);
+    }
+    return []; 
   };
 
-  const form = useForm<StageFieldFormData>({
-    // resolver: zodResolver(stageFieldSchema), // Remover resolver
+  let initialChecklistItems: Array<{ id: string; text: string }> = [];
+  if (initialData?.field_type === 'checklist' && initialData?.default_checklist_items) {
+      try {
+          if (Array.isArray(initialData.default_checklist_items)) {
+             const validItems = (initialData.default_checklist_items as any[]).filter(
+                (item): item is { id: string; text: string } =>
+                  typeof item === 'object' && item !== null &&
+                  typeof item.id === 'string' && typeof item.text === 'string'
+             );
+             if (validItems.length === initialData.default_checklist_items.length) {
+                initialChecklistItems = validItems;
+             } else {
+               console.warn("Formato inválido detectado em initialData.default_checklist_items (array)");
+             }
+          }
+          else if (typeof initialData.default_checklist_items === 'string') {
+             const parsed = JSON.parse(initialData.default_checklist_items);
+             if (Array.isArray(parsed)) {
+                const validItems = parsed.filter(
+                   (item): item is { id: string; text: string } =>
+                     typeof item === 'object' && item !== null &&
+                     typeof item.id === 'string' && typeof item.text === 'string'
+                );
+                if (validItems.length === parsed.length) {
+                   initialChecklistItems = validItems;
+                } else {
+                  console.warn("Formato inválido detectado em initialData.default_checklist_items (parsed string)");
+                }
+             } else {
+               console.warn("initialData.default_checklist_items (string) não é um array JSON válido.");
+             }
+         } else {
+            console.warn("initialData.default_checklist_items não é um array ou string JSON válida.");
+         }
+      } catch (error) {
+         console.error("Erro ao parsear initialData.default_checklist_items:", error);
+      }
+      initialData.default_value = undefined;
+  }
+
+  const form = useForm<StageFieldFormDataInternal>({
+    resolver: zodResolver(stageFieldFormSchemaInternal),
     defaultValues: {
-      field_name: initialData?.field_name ?? '',
-      field_type: initialData?.field_type as typeof SUPPORTED_FIELD_TYPES[number] | undefined ?? undefined,
-      is_required: initialData?.is_required ?? false,
-      options: getInitialOptions(), // Usar a função segura para obter as opções iniciais
-      default_value: initialData?.default_value ?? '',
+      field_name: '',
+      field_type: undefined,
+      is_required: false,
+      default_value: undefined,
+      default_checklist_items: [],
+      options: [],
     },
   });
 
-  // Configuração para o array dinâmico de opções
-  const { fields, append, remove } = useFieldArray({
-      control: form.control,
-      name: "options"
+  const { fields: optionFields, append: appendOption, remove: removeOption } = useFieldArray({
+    control: form.control,
+    name: "options"
+  });
+
+  const { fields: checklistItemFields, append: appendChecklistItem, remove: removeChecklistItem } = useFieldArray({
+    control: form.control,
+    name: "default_checklist_items"
   });
 
   const fieldType = form.watch('field_type');
 
-  // Tipar onSubmit explicitamente
-  const onSubmit: SubmitHandler<StageFieldFormData> = (data) => {
-     // Revalidar com Zod aqui se necessário, antes de chamar onSave
-     const validationResult = stageFieldSchema.safeParse(data);
-     if (!validationResult.success) {
-         console.error("Erro de validação Zod no Submit:", validationResult.error.flatten());
-         // Poderia mostrar um toast ou atualizar erros do formulário aqui
-         // Ex: validationResult.error.errors.forEach(err => form.setError(err.path[0] as keyof StageFieldFormData, { message: err.message }));
-         alert("Erro de validação: " + validationResult.error.errors.map(e => `${e.path.join('.')}: ${e.message}`).join('\n'));
-         return;
-     }
+  useEffect(() => {
+    if (initialData) {
+      form.reset({
+        field_name: initialData?.field_name ?? '',
+        field_type: initialData?.field_type as any, 
+        is_required: initialData?.is_required ?? false,
+        default_value: initialData?.default_value ?? undefined,
+        default_checklist_items: initialData?.default_checklist_items
+          ? initialData.default_checklist_items.map((text, index) => ({
+              id: `temp-${index}-${Date.now()}`,
+              text,
+            }))
+          : [],
+        options: initialData?.field_type === 'select' && Array.isArray(initialData?.options)
+          ? (initialData.options as Json[])
+              .map((opt: any) => typeof opt === 'string' ? { label: opt, value: opt } : opt)
+              .filter(opt => opt && typeof opt === 'object' && 'value' in opt && 'label' in opt)
+          : [],
+      });
+    } else {
+      // Opcional: Resetar para os padrões se initialData ficar nulo/undefined depois de ter valor
+      // form.reset(form.formState.defaultValues);
+    }
+  }, [initialData, form.reset]);
 
-     console.log("Salvando campo validado:", validationResult.data);
-     onSave(validationResult.data, initialData?.id);
+  const onSubmit: SubmitHandler<StageFieldFormDataInternal> = async (data) => {
+    const dataToSave: StageFieldFormDataExternal = {
+      ...data,
+      default_checklist_items: data.default_checklist_items?.map(item => item.text),
+      options: data.options,
+    }; 
+    console.log("Data being sent to onSave:", dataToSave);
+    await onSave(dataToSave, initialData?.id); 
   };
 
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-        
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <FormField
           control={form.control}
           name="field_name"
@@ -136,90 +258,173 @@ export default function StageFieldForm({ stageId, initialData, onSave, onCancel,
               <FormLabel>Tipo do Campo</FormLabel>
               <Select onValueChange={field.onChange} defaultValue={field.value}>
                 <FormControl>
-                  <SelectTrigger>
+                  <SelectTrigger id="field_type">
                     <SelectValue placeholder="Selecione o tipo" />
                   </SelectTrigger>
                 </FormControl>
                 <SelectContent>
-                  {SUPPORTED_FIELD_TYPES.map(type => (
-                    <SelectItem key={type} value={type}>{type}</SelectItem>
-                  ))}
+                  <SelectItem value="text">Texto Curto (Input)</SelectItem>
+                  <SelectItem value="textarea">Texto Longo (Textarea)</SelectItem>
+                  <SelectItem value="number">Número</SelectItem>
+                  <SelectItem value="date">Data</SelectItem>
+                  <SelectItem value="select">Seleção (Select)</SelectItem>
+                  <SelectItem value="boolean">Checkbox (Sim/Não)</SelectItem>
+                  <SelectItem value="checklist">Checklist</SelectItem> 
                 </SelectContent>
               </Select>
               <FormMessage />
             </FormItem>
           )}
         />
+      </div>
 
-        {/* Mostrar gerenciador de Opções apenas se o tipo for 'select' */}
-        {fieldType === 'select' && (
-          <div className="space-y-3 p-4 border rounded-md bg-muted/20">
-             <FormLabel className="text-base font-medium">Opções do Select</FormLabel>
-            {fields.map((item, index) => (
-              <div key={item.id} className="flex items-start gap-2">
-                <FormField
-                   control={form.control}
-                   name={`options.${index}.label`}
-                   render={({ field }) => (
-                      <FormItem className="flex-1">
-                         {/* Não mostrar label individual, só placeholder */}
-                         <FormControl>
-                           <Input placeholder={`Label da Opção ${index + 1}`} {...field} />
-                         </FormControl>
-                         <FormMessage className="text-xs" />
-                       </FormItem>
-                   )}
-                 />
-                 <FormField
-                   control={form.control}
-                   name={`options.${index}.value`}
-                   render={({ field }) => (
-                      <FormItem className="flex-1">
-                         <FormControl>
-                           <Input placeholder={`Valor da Opção ${index + 1}`} {...field} />
-                         </FormControl>
-                         <FormMessage className="text-xs" />
-                       </FormItem>
-                   )}
-                 />
-                 <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    className="mt-1 text-destructive hover:text-destructive flex-shrink-0 h-8 w-8"
-                    onClick={() => remove(index)}
-                    disabled={isSaving}
-                 >
-                   <Trash2 className="h-4 w-4" />
-                   <span className="sr-only">Remover Opção</span>
-                 </Button>
-              </div>
-            ))}
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              className="mt-2"
-              onClick={() => append({ label: '', value: '' })} // Adiciona um novo par vazio
-            >
-              + Adicionar Opção
-            </Button>
-          </div>
+      {fieldType === 'select' && (
+        <div className="space-y-3 p-4 border rounded-md bg-muted/20">
+           <FormLabel className="text-base font-medium">Opções do Select</FormLabel>
+          {optionFields.map((item, index) => (
+            <div key={item.id} className="flex items-start gap-2">
+              <FormField
+                 control={form.control}
+                 name={`options.${index}.label`}
+                 render={({ field }) => (
+                    <FormItem className="flex-1">
+                       <FormControl>
+                         <Input placeholder={`Label da Opção ${index + 1}`} {...field} />
+                       </FormControl>
+                       <FormMessage className="text-xs" />
+                     </FormItem>
+                 )}
+               />
+               <FormField
+                 control={form.control}
+                 name={`options.${index}.value`}
+                 render={({ field }) => (
+                    <FormItem className="flex-1">
+                       <FormControl>
+                         <Input placeholder={`Valor da Opção ${index + 1}`} {...field} />
+                       </FormControl>
+                       <FormMessage className="text-xs" />
+                     </FormItem>
+                 )}
+               />
+               <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  className="mt-1 text-destructive hover:text-destructive flex-shrink-0 h-8 w-8"
+                  onClick={() => removeOption(index)}
+                  disabled={isSaving}
+               >
+                 <Trash2 className="h-4 w-4" />
+                 <span className="sr-only">Remover Opção</span>
+               </Button>
+            </div>
+          ))}
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="mt-2"
+            onClick={() => appendOption({ label: '', value: '' })} 
+          >
+            + Adicionar Opção
+          </Button>
+        </div>
+      )}
+
+      {fieldType === 'checklist' && (
+         <div className="space-y-3 rounded-md border p-4 shadow-sm">
+           <Label className="font-medium">Itens Padrão do Checklist</Label>
+           {checklistItemFields.map((item, index) => (
+             <div key={item.id} className="flex items-center gap-2">
+               <FormField
+                 control={form.control}
+                 name={`default_checklist_items.${index}.text`}
+                 render={({ field }) => (
+                   <Input
+                     {...field}
+                     placeholder={`Texto do item ${index + 1}`}
+                     className="flex-grow"
+                   />
+                 )}
+               />
+                <input type="hidden" {...form.register(`default_checklist_items.${index}.id`)} />
+
+               <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  className="text-destructive hover:text-destructive flex-shrink-0 h-8 w-8"
+                  onClick={() => removeChecklistItem(index)}
+                  disabled={isSaving}
+               >
+                 <Trash2 className="h-4 w-4" />
+                 <span className="sr-only">Remover Item</span>
+               </Button>
+            </div>
+          ))}
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="mt-2"
+            onClick={() => appendChecklistItem({ id: `new-${checklistItemFields.length}-${Date.now()}`, text: '' })} 
+          >
+            <PlusCircle className="mr-2 h-4 w-4"/>
+            Adicionar Item
+          </Button>
+           {form.formState.errors.default_checklist_items?.root && (
+              <p className="text-sm font-medium text-destructive">
+                {form.formState.errors.default_checklist_items.root.message}
+              </p>
+           )}
+        </div>
+      )}
+
+      {fieldType !== 'checklist' && fieldType !== 'select' && (
+             <FormField
+               control={form.control}
+               name="default_value"
+               render={({ field: controllerField }) => {
+                 const renderDefaultValueInput = () => {
+                   switch (fieldType) {
+                     case 'boolean':
+                       return (
+                         <Checkbox
+                           checked={controllerField.value === 'true'}
+                           onCheckedChange={(checked) => {
+                             controllerField.onChange(checked ? 'true' : 'false');
+                           }}
+                         />
+                       );
+                     case 'date':
+                       return (
+                         <DatePicker
+                           value={controllerField.value ?? undefined} 
+                           onChange={(dateString: string | null) => controllerField.onChange(dateString ?? '')} 
+                         />
+                       );
+                     case 'textarea':
+                       return <Textarea {...controllerField} value={controllerField.value || ''} />;
+                     case 'text':
+                     case 'number':
+                     default: 
+                       return <Input {...controllerField} value={controllerField.value || ''} />;
+                   }
+                 };
+
+                 return (
+                   <FormItem>
+                     <FormLabel>Valor Padrão</FormLabel>
+                     <FormControl>
+                       {renderDefaultValueInput()} 
+                     </FormControl>
+                     <FormMessage />
+                   </FormItem>
+                 );
+               }}
+             />
         )}
-
-        <FormField
-          control={form.control}
-          name="default_value"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Valor Padrão (Opcional)</FormLabel>
-              <FormControl>
-                <Input placeholder="Ex: Pendente" {...field} value={field.value ?? ''} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
 
         <FormField
           control={form.control}
@@ -248,7 +453,7 @@ export default function StageFieldForm({ stageId, initialData, onSave, onCancel,
            </Button>
          </div>
 
-      </form>
+    </form>
     </Form>
   );
-} 
+}

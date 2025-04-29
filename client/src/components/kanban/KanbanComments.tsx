@@ -1,7 +1,7 @@
 import React from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQueryClient, useQuery } from '@tanstack/react-query';
 import supabase from "../../lib/supabase"; // Ajuste o caminho se necessário
 import { toast } from 'sonner';
 import {
@@ -20,17 +20,37 @@ import {
 import { Textarea } from '@/components/ui/textarea';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Skeleton } from '@/components/ui/skeleton';
-import {
-  KanbanCommentWithProfile,
-  kanbanCommentSchema,
-  KanbanCommentFormValues,
-} from '@/lib/database.types'; // Corrigindo o caminho do import novamente
 import { formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { z } from 'zod';
+
+// Definições movidas de database.types.ts
+
+// Tipagem para o comentário buscado do Supabase, incluindo informações do perfil do autor
+// Usamos a tipagem gerada pelo Supabase e estendemos/modificamos conforme necessário
+type ProfileData = {
+  name: string | null;
+  avatar_url: string | null;
+};
+export interface KanbanCommentWithProfile {
+  id: string;
+  content: string;
+  created_at: string;
+  card_id: string;
+  user_id: string;
+  updated_at: string;
+  profiles: ProfileData | null; // A query junta profiles, então garantimos que ele existe aqui
+}
+
+// Schema Zod para validação do formulário de novo comentário
+export const kanbanCommentSchema = z.object({
+  content: z.string().min(1, { message: 'O comentário não pode estar vazio.' }),
+});
+
+// Tipo inferido a partir do schema Zod para os valores do formulário
+export type KanbanCommentFormValues = z.infer<typeof kanbanCommentSchema>;
 
 interface KanbanCommentsProps {
-  comments: KanbanCommentWithProfile[] | undefined;
-  isLoadingComments: boolean;
   cardId: string;
   userId: string | undefined; // ID do usuário logado
 }
@@ -43,8 +63,40 @@ const getInitials = (name: string | null | undefined): string => {
   return (names[0][0] + names[names.length - 1][0]).toUpperCase();
 };
 
-export function KanbanComments({ comments, isLoadingComments, cardId, userId }: KanbanCommentsProps) {
+export function KanbanComments({ cardId, userId }: KanbanCommentsProps) {
   const queryClient = useQueryClient();
+
+  const { data: comments, isLoading: isLoadingComments } = useQuery<KanbanCommentWithProfile[]>({
+    queryKey: ['kanban_comments', cardId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('kanban_comments')
+        .select(`
+          id,
+          content,
+          created_at,
+          card_id,
+          user_id,
+          updated_at,
+          profiles (
+            name,
+            avatar_url
+          )
+        `)
+        .eq('card_id', cardId)
+        .order('created_at', { ascending: true });
+
+      if (error) {
+        console.error('Erro ao buscar comentários:', error);
+        toast.error(`Falha ao buscar comentários: ${error.message}`);
+        throw new Error('Não foi possível buscar os comentários.');
+      }
+      // A FK foi corrigida, a tipagem direta deve funcionar.
+      // Supabase deve retornar dados que correspondem a KanbanCommentWithProfile[]
+      return (data as KanbanCommentWithProfile[] | null) || [];
+    },
+    enabled: !!cardId, // Só executa a query se cardId existir
+  });
 
   const form = useForm<KanbanCommentFormValues>({
     resolver: zodResolver(kanbanCommentSchema),
@@ -114,13 +166,11 @@ export function KanbanComments({ comments, isLoadingComments, cardId, userId }: 
                     <span className="text-sm font-medium text-gray-900 dark:text-gray-100">
                       {comment.profiles?.name ?? 'Usuário desconhecido'}
                     </span>
-                    <span className="text-xs text-gray-500 dark:text-gray-400">
+                    <div className="text-xs text-muted-foreground">
                       {formatDistanceToNow(new Date(comment.created_at), { addSuffix: true, locale: ptBR })}
-                    </span>
+                    </div>
                   </div>
-                  <p className="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap">
-                    {comment.content}
-                  </p>
+                  <p className="text-sm text-muted-foreground whitespace-pre-wrap break-words">{comment.content}</p>
                 </div>
               </div>
             ))
@@ -159,4 +209,4 @@ export function KanbanComments({ comments, isLoadingComments, cardId, userId }: 
       </Form>
     </div>
   );
-} 
+}

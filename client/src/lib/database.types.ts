@@ -453,6 +453,69 @@ export type Database = {
           },
         ]
       }
+      kanban_checklist_item_states: {
+        Row: {
+          card_id: string
+          created_at: string
+          field_id: string
+          is_checked: boolean
+          item_id: string
+          updated_at: string
+        }
+        Insert: {
+          card_id: string
+          created_at?: string
+          field_id: string
+          is_checked?: boolean
+          item_id: string
+          updated_at?: string
+        }
+        Update: {
+          card_id?: string
+          created_at?: string
+          field_id?: string
+          is_checked?: boolean
+          item_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "kanban_checklist_item_states_card_id_fkey"
+            columns: ["card_id"]
+            isOneToOne: false
+            referencedRelation: "kanban_cards"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "kanban_checklist_item_states_card_id_fkey"
+            columns: ["card_id"]
+            isOneToOne: false
+            referencedRelation: "view_kanban_cards"
+            referencedColumns: ["card_id"]
+          },
+          {
+            foreignKeyName: "kanban_checklist_item_states_card_id_fkey"
+            columns: ["card_id"]
+            isOneToOne: false
+            referencedRelation: "view_kanban_cards_dependents"
+            referencedColumns: ["card_id"]
+          },
+          {
+            foreignKeyName: "kanban_checklist_item_states_card_id_fkey"
+            columns: ["card_id"]
+            isOneToOne: false
+            referencedRelation: "view_kanban_cards_holders"
+            referencedColumns: ["card_id"]
+          },
+          {
+            foreignKeyName: "kanban_checklist_item_states_field_id_fkey"
+            columns: ["field_id"]
+            isOneToOne: false
+            referencedRelation: "kanban_stage_fields"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       kanban_comments: {
         Row: {
           card_id: string
@@ -506,6 +569,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "view_kanban_cards_holders"
             referencedColumns: ["card_id"]
+          },
+          {
+            foreignKeyName: "kanban_comments_user_id_fkey_profiles"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
           },
         ]
       }
@@ -684,6 +754,7 @@ export type Database = {
       kanban_stage_fields: {
         Row: {
           created_at: string
+          default_checklist_items: Json | null
           default_value: string | null
           field_name: string
           field_type: string
@@ -696,6 +767,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          default_checklist_items?: Json | null
           default_value?: string | null
           field_name: string
           field_type: string
@@ -708,6 +780,7 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          default_checklist_items?: Json | null
           default_value?: string | null
           field_name?: string
           field_type?: string
@@ -1009,11 +1082,11 @@ export type Database = {
           coparticipation: string
           created_at: string | null
           id: string
+          lives: number | null
           pre_proposta: string | null
           status: string | null
           submission_id: string | null
           type: string
-          lives: number | null
           updated_at: string | null
           validity_date: string | null
           value: number
@@ -1022,11 +1095,11 @@ export type Database = {
           coparticipation: string
           created_at?: string | null
           id?: string
+          lives?: number | null
           pre_proposta?: string | null
           status?: string | null
           submission_id?: string | null
           type: string
-          lives?: number | null
           updated_at?: string | null
           validity_date?: string | null
           value: number
@@ -1035,11 +1108,11 @@ export type Database = {
           coparticipation?: string
           created_at?: string | null
           id?: string
+          lives?: number | null
           pre_proposta?: string | null
           status?: string | null
           submission_id?: string | null
           type?: string
-          lives?: number | null
           updated_at?: string | null
           validity_date?: string | null
           value?: number
@@ -1583,6 +1656,10 @@ export type Database = {
         }
         Returns: string
       }
+      get_full_proposal_data: {
+        Args: { p_submission_id: string }
+        Returns: Json
+      }
       get_kanban_cards_with_operator_logo: {
         Args: { p_board_id: string }
         Returns: {
@@ -1609,10 +1686,6 @@ export type Database = {
         }[]
       }
       get_proposal_details: {
-        Args: { p_submission_id: string }
-        Returns: Json
-      }
-      get_full_proposal_data: {
         Args: { p_submission_id: string }
         Returns: Json
       }
@@ -1749,29 +1822,3 @@ export const Constants = {
     },
   },
 } as const
-
-// Adicionado para tipagens de Kanban Comments
-import { z } from 'zod';
-
-// Tipagem para o comentário buscado do Supabase, incluindo informações do perfil do autor
-export interface KanbanCommentWithProfile {
-  id: string;
-  card_id: string;
-  user_id: string;
-  content: string;
-  created_at: string;
-  updated_at: string;
-  profiles: {
-    id: string;
-    name: string | null;
-    avatar_url: string | null;
-  } | null; 
-}
-
-// Schema Zod para validação do formulário de novo comentário
-export const kanbanCommentSchema = z.object({
-  content: z.string().min(1, { message: 'O comentário não pode estar vazio.' }),
-});
-
-// Tipo inferido a partir do schema Zod para os valores do formulário
-export type KanbanCommentFormValues = z.infer<typeof kanbanCommentSchema>;

@@ -62,10 +62,10 @@ export default function CardSupabase({ card, onClick, onDragStart }: CardSupabas
         )}
       </div>
       
-      {card.lives > 0 && (
+      {card.pme_submissions?.broker?.name && (
         <div className="mt-1 flex items-center text-sm text-gray-600">
-          <UserCheck className="h-4 w-4 mr-2 flex-shrink-0" />
-          <span>{card.lives} vidas</span>
+          <UserRoundCheck className="h-4 w-4 mr-2 flex-shrink-0" />
+          <span>{card.pme_submissions.broker.name}</span>
         </div>
       )}
       

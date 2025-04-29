@@ -270,10 +270,13 @@ export default function VisualizarQuadro() {
       {/* Modal de Cartão: Usar selectedCardData para controlar */}
       {selectedCardData && id && (
         <CardModalSupabase 
-          isOpen={!!selectedCardData}
+          isOpen={!!selectedCardData} 
           onClose={handleCloseModal}
           card={selectedCardData}
           boardId={id}
+          stages={stages || []} 
+          partnerDialogRefType={null} 
+          beneficiaryDialogRefType={null} 
         />
       )}
 

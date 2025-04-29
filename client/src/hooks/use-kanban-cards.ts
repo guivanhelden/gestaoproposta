@@ -6,6 +6,12 @@ import { useAuth } from '@/hooks/use-auth';
 export type KanbanCard = Database['public']['Tables']['kanban_cards']['Row'] & {
   operators: { logo_url: string | null } | null;
   stage: { id: string; title: string } | null;
+  pme_submissions?: {
+    broker?: {
+      id: number;
+      name: string;
+    } | null;
+  } | null;
 };
 
 export type KanbanCardInsert = Database['public']['Tables']['kanban_cards']['Insert'];
@@ -33,10 +39,11 @@ export function useKanbanCards(boardId: string) {
         .select(`
           *,
           stage:stage_id(id, title),
-          operators ( logo_url ) 
+          operators ( logo_url ),
+          pme_submissions!submission_id(broker:broker_id(id, name))
         `)
         .eq('board_id', boardId)
-        .order('position', { ascending: true });
+        .order('position', { ascending: true});
 
       console.log("Dados brutos do Supabase:", data);
 

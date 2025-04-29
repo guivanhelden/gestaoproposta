@@ -4,6 +4,89 @@
 
 Este documento descreve as otimizações implementadas no sistema para melhorar a performance, resolver problemas de timeout e aprimorar a experiência do usuário.
 
+## Otimizações do Sistema de Checklist no Kanban
+
+### Contexto
+
+O sistema Kanban foi atualizado para suportar a funcionalidade de checklists nas etapas, permitindo definir listas de itens padrão que podem ser marcados/desmarcados nos cartões individuais.
+
+### Problema
+
+A implementação inicial apresentava diversos problemas:
+
+1. Erros de contexto de formulário nos componentes que usavam React Hook Form
+2. Incompatibilidades de tipo entre os objetos recebidos do banco e os esperados pelos componentes
+3. Formato inconsistente dos itens de checklist (strings vs. objetos)
+4. Falta de processamento adequado para conversão entre formatos
+
+### Solução Implementada
+
+#### 1. Correção do Contexto de Formulário
+
+Substituímos a implementação incorreta usando `FormProvider` pela implementação correta do shadcn/ui:
+
+```tsx
+// Antes
+<FormProvider {...form}>
+  <form>...</form>
+</FormProvider>
+
+// Depois
+<Form {...form}>
+  <form>...</form>
+</Form>
+```
+
+#### 2. Tratamento de Dados em StageFieldsConfigModal
+
+Melhoramos a conversão de dados entre o formato do banco e o formato esperado pelo formulário:
+
+```tsx
+initialData={fieldToEdit ? {
+  ...fieldToEdit,
+  // Converter array de strings para array de objetos {id, text}
+  default_checklist_items: Array.isArray(fieldToEdit.default_checklist_items)
+    ? (fieldToEdit.default_checklist_items as string[]).map((text, index) => ({
+        id: `temp-${index}-${Date.now()}`,
+        text
+      }))
+    : [],
+} as any : undefined}
+```
+
+#### 3. Detecção Automática e Conversão de Formato no ChecklistField
+
+Implementamos lógica inteligente para detectar e processar diferentes formatos de dados:
+
+```tsx
+// Verificar se é um array de strings e converter para objetos
+if (items.length > 0 && typeof items[0] === 'string') {
+  return items.map((text, index) => ({
+    id: `default-${index}-${fieldId}`,
+    text: text as string
+  }));
+}
+```
+
+### Benefícios
+
+1. **Integridade dos Dados**: Garantia de consistência entre os formatos do banco e da UI
+2. **Melhor Experiência do Usuário**: Visualização e interação correta com itens de checklist
+3. **Manutenibilidade**: Código mais robusto com tratamento de diferentes formatos de dados
+4. **Desempenho**: Otimização da forma como os dados são processados e renderizados
+
+### Arquitetura do Sistema de Checklist
+
+O sistema de checklist foi implementado usando duas tabelas principais:
+
+1. **kanban_stage_fields**: Define os campos do tipo checklist, incluindo itens padrão para cada etapa
+2. **kanban_checklist_item_states**: Armazena o estado (marcado/não marcado) de cada item de checklist por cartão
+
+Esta arquitetura permite:
+- Definir checklists padrão por etapa
+- Rastrear o estado dos itens individualmente por cartão
+- Reutilizar itens de checklist entre diferentes cartões na mesma etapa
+
 ## Alterações na Estrutura de Dados
 
 ### Estrutura de Resposta da API

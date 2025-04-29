@@ -11,6 +11,9 @@ type PmePartner = Database['public']['Tables']['pme_company_partners']['Row'];
 type PmeHolder = Database['public']['Tables']['pme_holders']['Row'];
 type PmeDependent = Database['public']['Tables']['pme_dependents']['Row'];
 type PmeFile = Database['public']['Tables']['pme_files']['Row'];
+// Adicionar tipo para Checklist Item
+type KanbanChecklistItem = Database['public']['Tables']['kanban_checklist_items']['Row'];
+
 // Tipos para submission, operator, broker (ajuste se os nomes/campos forem diferentes)
 type PmeSubmission = Database['public']['Tables']['pme_submissions']['Row'] & {
   operator_name?: string | null;
@@ -485,6 +488,146 @@ export async function fetchActiveOperators(): Promise<OperatorOption[]> {
   // Opcional: Modificar o nome para incluir o ID se for útil
   // const formattedData = data.map(op => ({ ...op, name: `${op.name} (ID: ${op.id})` }));
   return data as OperatorOption[];
+}
+
+// --- Funções para Kanban Checklist Items ---
+
+/**
+ * Busca os itens de um checklist específico para um card.
+ * @param cardId UUID do card.
+ * @param fieldId UUID do campo do tipo checklist.
+ * @returns Promise com array de KanbanChecklistItem ordenados por posição.
+ */
+export async function fetchChecklistItems(cardId: string, fieldId: string): Promise<KanbanChecklistItem[]> {
+  // console.log(`Buscando checklist items para card ${cardId} e field ${fieldId}`);
+  const { data, error } = await supabase
+    .from('kanban_checklist_items')
+    .select('*')
+    .eq('card_id', cardId)
+    .eq('field_id', fieldId)
+    .order('position', { ascending: true });
+
+  if (error) {
+    console.error('Erro ao buscar checklist items:', error);
+    throw new Error(`Erro ao buscar checklist items: ${error.message}`);
+  }
+  // console.log(`Itens encontrados: ${data?.length ?? 0}`);
+  return data || [];
+}
+
+// Tipo para criar um novo item de checklist
+type CreateChecklistItemData = Omit<KanbanChecklistItem, 'id' | 'created_at' | 'updated_at'>;
+
+/**
+ * Adiciona um novo item a um checklist.
+ * @param itemData Dados do novo item.
+ * @returns Promise com o KanbanChecklistItem criado.
+ */
+export async function addChecklistItem(itemData: CreateChecklistItemData): Promise<KanbanChecklistItem> {
+  console.log("Adicionando checklist item:", itemData);
+  const { data, error } = await supabase
+    .from('kanban_checklist_items')
+    .insert(itemData)
+    .select()
+    .single();
+
+  if (error) {
+    console.error('Erro ao adicionar checklist item:', error);
+    throw new Error(`Erro ao adicionar checklist item: ${error.message}`);
+  }
+  console.log("Item adicionado:", data);
+  return data;
+}
+
+// Tipo para atualizar um item de checklist (parcial)
+type UpdateChecklistItemData = Partial<Omit<KanbanChecklistItem, 'id' | 'card_id' | 'field_id' | 'created_at'>>;
+
+/**
+ * Atualiza um item de checklist existente.
+ * @param itemId UUID do item a ser atualizado.
+ * @param updateData Dados a serem atualizados (is_checked, item_text, position, updated_at).
+ * @returns Promise com o KanbanChecklistItem atualizado.
+ */
+export async function updateChecklistItem(itemId: string, updateData: UpdateChecklistItemData): Promise<KanbanChecklistItem> {
+  console.log(`Atualizando checklist item ${itemId} com:`, updateData);
+  // Garante que updated_at seja atualizado
+  const dataToUpdate = { ...updateData, updated_at: new Date().toISOString() };
+  
+  const { data, error } = await supabase
+    .from('kanban_checklist_items')
+    .update(dataToUpdate)
+    .eq('id', itemId)
+    .select()
+    .single();
+
+  if (error) {
+    console.error(`Erro ao atualizar checklist item ${itemId}:`, error);
+    throw new Error(`Erro ao atualizar checklist item: ${error.message}`);
+  }
+  console.log("Item atualizado:", data);
+  return data;
+}
+
+/**
+ * Exclui um item de checklist.
+ * @param itemId UUID do item a ser excluído.
+ * @returns Promise vazia.
+ */
+export async function deleteChecklistItem(itemId: string): Promise<void> {
+  console.log(`Excluindo checklist item ${itemId}`);
+  const { error } = await supabase
+    .from('kanban_checklist_items')
+    .delete()
+    .eq('id', itemId);
+
+  if (error) {
+    console.error(`Erro ao excluir checklist item ${itemId}:`, error);
+    throw new Error(`Erro ao excluir checklist item: ${error.message}`);
+  }
+  console.log("Item excluído com sucesso.");
+}
+
+/**
+ * Atualiza a posição de múltiplos itens de checklist (para reordenação).
+ * @param items Array de objetos com id e nova position.
+ * @returns Promise com os itens atualizados.
+ */
+export async function updateChecklistItemsOrder(items: { id: string; position: number }[]): Promise<KanbanChecklistItem[]> {
+  console.log("Atualizando ordem dos checklist items:", items);
+  
+  // O Supabase SDK não suporta update em lote com valores diferentes diretamente.
+  // Precisamos fazer chamadas individuais ou usar uma função RPC.
+  // Por simplicidade, faremos chamadas individuais aqui, mas uma RPC seria mais eficiente.
+  
+  const updatePromises = items.map(item => 
+    supabase
+      .from('kanban_checklist_items')
+      .update({ position: item.position, updated_at: new Date().toISOString() })
+      .eq('id', item.id)
+      .select()
+      .single()
+  );
+  
+  try {
+    const results = await Promise.all(updatePromises);
+    // Verificar se houve erros individuais
+    const errors = results.filter(result => result.error);
+    if (errors.length > 0) {
+      console.error("Erros ao atualizar ordem:", errors);
+      // Poderia lançar um erro agregado ou retornar os erros
+      throw new Error(`Erro ao atualizar a ordem de ${errors.length} item(ns).`);
+    }
+    console.log("Ordem atualizada com sucesso.");
+    // Filtrar resultados nulos antes de retornar
+    return results.map(result => result.data).filter(item => item !== null) as KanbanChecklistItem[];
+  } catch (error) {
+    console.error("Erro geral ao atualizar ordem:", error);
+    if (error instanceof Error) {
+      throw error; // Re-lança o erro (pode ser o erro agregado da verificação)
+    } else {
+      throw new Error("Ocorreu um erro desconhecido ao atualizar a ordem.");
+    }
+  }
 }
 
 // Você pode adicionar outras funções de API aqui conforme necessário

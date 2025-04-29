@@ -16,12 +16,14 @@ import { useToast } from "@/hooks/use-toast";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 
 type StageField = Database["public"]["Tables"]["kanban_stage_fields"]["Row"];
+// Este tipo agora reflete o que vem do formulário (checklist como string[])
 type StageFieldFormData = {
   field_name: string;
   field_type: string;
   is_required: boolean;
   options?: Array<{ label: string; value: string; }> | undefined;
   default_value?: string | undefined;
+  default_checklist_items?: string[]; // Espera string[] do formulário
 };
 
 type StageFieldsConfigModalProps = {
@@ -106,7 +108,8 @@ export default function StageFieldsConfigModal({ stageId, stageTitle, isOpen, on
   const handleReturnToList = () => {
      setFieldToEdit(null);
      setMode('list');
-     refetch();
+     // refetch é chamado ao salvar ou fechar, remover daqui para evitar chamada dupla
+     // refetch(); 
   };
 
   const handleDeleteField = (fieldId: string) => {
@@ -114,52 +117,49 @@ export default function StageFieldsConfigModal({ stageId, stageTitle, isOpen, on
     // TODO: Implementar exclusão
   };
 
-  const handleSaveField = async (formData: StageFieldFormData, fieldIdToUpdate?: string) => {
-    if (!stageId) return;
-
-    // Remover a lógica de parse, formData.options já é um array de objetos
-    /*
-    let parsedOptions: any = null;
-    if (formData.field_type === 'select' && formData.options) {
-       try {
-          // Não precisamos mais parsear aqui!
-          // parsedOptions = JSON.parse(formData.options);
-          parsedOptions = formData.options; // Usar diretamente
-       } catch (e) {
-          toast({ title: "Erro de Formato", description: "O JSON das opções é inválido.", variant: "destructive" });
-          return; 
-       }
+  // handleSaveField agora recebe StageFieldFormData (com checklist como string[])
+  const handleSaveField = (formData: StageFieldFormData, fieldIdToUpdate?: string) => { 
+    // Garantir que stageId existe antes de prosseguir
+    if (!stageId) {
+      toast({ title: "Erro", description: "ID da Etapa inválido.", variant: "destructive" });
+      return;
     }
-    */
-   
-    // Garantir que options é um array ou null
-   const optionsPayload = (formData.field_type === 'select' && Array.isArray(formData.options)) 
-                           ? formData.options 
-                           : null;
 
-    const fieldDataPayload = {
-        stage_id: stageId,
-        field_name: formData.field_name,
-        field_type: formData.field_type,
-        is_required: formData.is_required,
-        options: optionsPayload, // <-- Usar diretamente o array (ou null)
-        default_value: formData.default_value || null,
-        position: fieldIdToUpdate ? undefined : (fields?.length ?? 0), 
+    // Preparar dados para a API
+    // Extrair default_checklist_items especificamente se for do tipo checklist
+    const { default_checklist_items, ...restOfData } = formData;
+
+    const apiData: Partial<StageField> = {
+      ...restOfData,
+      // Garantir que options seja null se não for select
+      options: formData.field_type === 'select' ? formData.options : null,
+      // Garantir que default_value seja null se não for aplicável (ou não preenchido)
+      default_value: formData.default_value || null,
+      // Incluir default_checklist_items (já como string[]) apenas se for do tipo checklist
+      default_checklist_items: formData.field_type === 'checklist' ? formData.default_checklist_items : null,
+      // Certificar que stage_id está presente
+      stage_id: stageId, // Agora sabemos que stageId não é null
     };
 
-    if (fieldIdToUpdate) {
-       const { stage_id, position, ...updateData } = fieldDataPayload;
-       console.log("Chamando updateMutation com:", { fieldId: fieldIdToUpdate, data: updateData });
-       updateMutation.mutate({ fieldId: fieldIdToUpdate, data: updateData });
-    } else {
-       const createData = { ...fieldDataPayload };
-       if (createData.position === undefined) {
-           delete createData.position;
-       }
-       console.log("Chamando createMutation com:", createData);
-       createMutation.mutate(createData as any);
-    }
-  };
+    // Remover propriedades que não devem ir para o update/create diretamente
+    // (Ex: campos que só existem no form, ou que são tratados separadamente)
+    // delete apiData.algumCampoExtra;
+
+     if (fieldIdToUpdate) {
+       // Atualizar campo existente
+       updateMutation.mutate({ fieldId: fieldIdToUpdate, data: apiData });
+     } else {
+        // Criar novo campo
+        // Calcular a próxima posição
+        const nextPosition = fields?.length ?? 0;
+        const createData = {
+          ...apiData,
+          position: nextPosition,
+        };
+        // Garantir que o tipo corresponde a CreateStageFieldData (omitindo id, created_at, updated_at)
+        createMutation.mutate(createData as Omit<StageField, 'id' | 'created_at' | 'updated_at'>);
+     }
+   };
 
   if (!isOpen) return null;
 
@@ -168,11 +168,21 @@ export default function StageFieldsConfigModal({ stageId, stageTitle, isOpen, on
         return (
            <StageFieldForm
               key={fieldToEdit?.id ?? 'add'}
-              stageId={stageId!} 
-              initialData={fieldToEdit}
+              stageId={stageId!}
+              // Passar dados iniciais (checklist já vem como string[] do fetch)
+              initialData={fieldToEdit ? {
+                 ...fieldToEdit,
+                 // Converter array de strings para array de objetos {id, text}
+                 default_checklist_items: Array.isArray(fieldToEdit.default_checklist_items)
+                   ? (fieldToEdit.default_checklist_items as string[]).map((text, index) => ({
+                       id: `temp-${index}-${Date.now()}`,
+                       text
+                     }))
+                   : [],
+               } as any : undefined}
               onSave={handleSaveField}
-              onCancel={handleReturnToList}
-              isSaving={createMutation.isPending || updateMutation.isPending}
+              onCancel={handleReturnToList} 
+              isSaving={createMutation.isPending || updateMutation.isPending} // Corrigir nome da prop
            />
         );
      }
@@ -254,7 +264,7 @@ export default function StageFieldsConfigModal({ stageId, stageTitle, isOpen, on
   return (
     <Dialog open={isOpen} onOpenChange={(open) => {
        if (!open) {
-          handleReturnToList();
+          handleReturnToList(); // Garante reset do estado ao fechar
           onClose();
        }
     }}>

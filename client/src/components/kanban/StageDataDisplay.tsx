@@ -23,6 +23,7 @@ import { CalendarIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from '@/hooks/use-auth';
 import { DatePicker } from "@/components/ui/date-picker";
+import ChecklistField from './ChecklistField'; // Importar o novo componente
 
 type StageDataDisplayProps = {
   cardId: string;
@@ -138,6 +139,13 @@ const renderField = (item: StageFieldWithValue) => {
                </Label>
              </div>
            );
+    case 'checklist': // Novo case para checklist
+      return (
+        <ChecklistField 
+          cardId={cardId} // Usar a prop cardId diretamente
+          fieldId={field.id} 
+        />
+      );
     default:
       // Campo desconhecido ou não suportado para exibição simples
       return (
@@ -146,6 +154,109 @@ const renderField = (item: StageFieldWithValue) => {
             {label} ({field.field_type}){field.is_required ? <span className="text-destructive"> *</span> : ''}
           </Label>
           <Input id={id} value={value ?? 'N/A'} readOnly disabled className="bg-muted/30 cursor-default" />
+        </div>
+      );
+  }
+};
+
+// Função auxiliar para renderizar o valor do campo de forma simples (não editável)
+const renderSimpleField = (item: StageFieldWithValue, cardId: string) => {
+  const { field, value } = item;
+
+  // Extrair options do JSON se for select
+  let options: { label: string, value: string }[] = [];
+  try {
+    if (field.options && typeof field.options === 'object') {
+      // Tenta tratar como array diretamente
+      if (Array.isArray(field.options)) {
+        options = field.options.map((opt: any) => 
+          typeof opt === 'string' ? { label: opt, value: opt } : opt
+        );
+      } 
+      // Adicione outras lógicas se o JSON tiver outra estrutura, ex: { key: value }
+    }
+  } catch (e) {
+    console.error("Erro ao parsear opções do select:", field.options, e);
+  }
+
+  switch (field.field_type) {
+    case 'text':
+    case 'number': // Tratar number como text por enquanto
+      return (
+        <div key={field.id} className="space-y-1">
+          <Label htmlFor={`field-${field.id}`} className="font-medium">
+            {field.field_name || `Campo ${field.id}`}
+          </Label>
+          <div className="mt-1 text-sm text-muted-foreground" id={`field-${field.id}`}>
+            {value ?? ''}
+          </div>
+        </div>
+      );
+    case 'textarea':
+      return (
+        <div key={field.id} className="space-y-1">
+          <Label htmlFor={`field-${field.id}`} className="font-medium">
+            {field.field_name || `Campo ${field.id}`}
+          </Label>
+          <div className="mt-1 text-sm text-muted-foreground" id={`field-${field.id}`}>
+            {value ?? ''}
+          </div>
+        </div>
+      );
+    case 'date':
+      return (
+        <div key={field.id} className="space-y-1">
+          <Label htmlFor={`field-${field.id}`} className="font-medium">
+            {field.field_name || `Campo ${field.id}`}
+          </Label>
+          <div className="mt-1 text-sm text-muted-foreground" id={`field-${field.id}`}>
+            {formatDateSafe(value)}
+          </div>
+        </div>
+      );
+    case 'select':
+      return (
+        <div key={field.id} className="space-y-1">
+          <Label htmlFor={`field-${field.id}`} className="font-medium">
+            {field.field_name || `Campo ${field.id}`}
+          </Label>
+          <div className="mt-1 text-sm text-muted-foreground" id={`field-${field.id}`}>
+            {options.find(opt => opt.value === value)?.label ?? 'N/A'}
+          </div>
+        </div>
+      );
+    case 'boolean':
+    case 'checkbox':
+      return (
+        <div key={field.id} className="flex items-center space-x-2 pt-2">
+          <Checkbox 
+            id={`field-${field.id}`} 
+            checked={value === 'true' || value === '1'} 
+            disabled 
+            className="cursor-default data-[state=checked]:bg-muted-foreground" 
+          />
+          <Label htmlFor={`field-${field.id}`} className="text-xs font-medium text-muted-foreground cursor-default">
+            {field.field_name || `Campo ${field.id}`}{field.is_required ? <span className="text-destructive"> *</span> : ''}
+          </Label>
+        </div>
+      );
+    case 'checklist': // Novo case para checklist
+      return (
+        <ChecklistField 
+          cardId={cardId} // Usar a prop cardId diretamente
+          fieldId={field.id} 
+        />
+      );
+    default:
+      // Campo desconhecido ou não suportado para exibição simples
+      return (
+        <div key={field.id} className="space-y-1">
+          <Label htmlFor={`field-${field.id}`} className="font-medium">
+            {field.field_name || `Campo ${field.id}`} ({field.field_type})
+          </Label>
+          <div className="mt-1 text-sm text-muted-foreground" id={`field-${field.id}`}>
+            {value ?? 'N/A'}
+          </div>
         </div>
       );
   }
@@ -414,6 +525,13 @@ export default function StageDataDisplay({ cardId, stageId }: StageDataDisplayPr
                         />
                     </div>
                  );
+              case 'checklist': // Novo case para checklist
+                return (
+                  <ChecklistField 
+                    cardId={cardId} // Usar a prop cardId diretamente
+                    fieldId={stageFieldDefinition.id} 
+                  />
+                );
               default:
                 return <Input id={fieldName} value={String(field.value ?? 'N/A')} disabled />;
             }

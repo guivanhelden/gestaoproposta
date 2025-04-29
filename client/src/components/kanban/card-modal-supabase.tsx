@@ -6,7 +6,8 @@ import {
   History,
   Building2,
   FileSpreadsheet,
-  Users
+  Users,
+  MessageSquare // Adicionada importação
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog as MainDialog, DialogContent as MainDialogContent, DialogHeader as MainDialogHeader } from "@/components/ui/dialog";
@@ -49,11 +50,14 @@ type PmePartner = Database['public']['Tables']['pme_company_partners']['Row'];
 type PmeHolder = Database['public']['Tables']['pme_holders']['Row'];
 type PmeDependent = Database['public']['Tables']['pme_dependents']['Row'];
 
+type StageInfo = { id: string; title: string }; 
+
 type CardModalProps = {
   isOpen: boolean;
   onClose: () => void;
   card: KanbanCard; 
   boardId: string; 
+  stages: StageInfo[]; 
   partnerDialogRefType: { 
     openAddPartner: () => void; 
     openEditPartner: (partner: PartnerUI) => void;
@@ -69,7 +73,13 @@ type CardModalProps = {
   } | null;
 };
 
-export default function CardModalSupabase({ isOpen, onClose, card, boardId }: CardModalProps) { 
+export default function CardModalSupabase({ 
+  isOpen, 
+  onClose, 
+  card, 
+  boardId, 
+  stages 
+}: CardModalProps) { 
   const { toast } = useToast();
   const { deleteCard } = useKanbanCards(boardId);
   const { user } = useAuth();
@@ -185,7 +195,7 @@ export default function CardModalSupabase({ isOpen, onClose, card, boardId }: Ca
       validity_date: null,
       pre_proposta: null,
       has_grace_period: false,
-      grace_reason: null,
+      grace_reason: null
     }
   });
 
@@ -473,6 +483,9 @@ export default function CardModalSupabase({ isOpen, onClose, card, boardId }: Ca
     }
   };
 
+  // Encontrar o título da etapa atual
+  const currentStageName = stages.find(stage => stage.id === card.stage_id)?.title || "Etapa Desconhecida";
+
   return (
     <>
       <MainDialog open={isOpen} onOpenChange={handleMainDialogOpenChange}>
@@ -611,17 +624,36 @@ export default function CardModalSupabase({ isOpen, onClose, card, boardId }: Ca
               )}
             </div>
             
-            <div className="md:col-span-1 p-4 bg-gradient-to-b from-muted to-background rounded-md border shadow-sm h-fit sticky top-4">
-              <h3 className="font-semibold mb-4 flex items-center gap-2">
-                <FileSpreadsheet className="h-4 w-4 text-primary" />
-                Etapa Atual
-              </h3>
-              <div className="space-y-3">
-                {card.id && card.stage_id ? (
-                  <StageDataDisplay cardId={card.id} stageId={card.stage_id} />
+            {/* Coluna da direita (Dados da Etapa e Comentários) */}
+            <div className="md:col-span-1 flex flex-col gap-6">
+              {/* Seção Dados da Etapa */}
+              <div className="p-4 bg-gradient-to-b from-muted/60 to-muted/30 rounded-md border shadow-sm h-fit">
+                <h3 className="font-semibold mb-4 flex items-center gap-2">
+                  <FileSpreadsheet className="h-4 w-4 text-primary" />
+                  {currentStageName} 
+                </h3>
+                <div className="space-y-3">
+                  {card.id && card.stage_id ? (
+                    <StageDataDisplay cardId={card.id} stageId={card.stage_id} />
+                  ) : (
+                    <div className="text-sm text-muted-foreground italic p-3 bg-muted rounded-md text-center">
+                      {isLoading ? <Skeleton className="h-5 w-3/4 mx-auto" /> : "Informações da etapa não disponíveis."}
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Seção de Comentários movida para cá */}
+              <div className="p-4 bg-gradient-to-b from-muted/60 to-muted/30 rounded-md border shadow-sm h-fit">
+                <h3 className="font-semibold mb-4 flex items-center gap-2">
+                  <MessageSquare className="h-4 w-4 text-primary" />
+                  Comentários
+                </h3>
+                {card.id && userId ? (
+                   <KanbanComments cardId={card.id} userId={userId} />
                 ) : (
                   <div className="text-sm text-muted-foreground italic p-3 bg-muted rounded-md text-center">
-                    {isLoading ? <Skeleton className="h-5 w-3/4 mx-auto" /> : "Informações da etapa não disponíveis."}
+                    Carregando comentários...
                   </div>
                 )}
               </div>
