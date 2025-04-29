@@ -33,12 +33,13 @@ export function DatePicker({
   React.useEffect(() => {
     if (value) {
       try {
+        // Usa parse para converter yyyy-MM-dd para Date
         const parsedDate = parse(value, 'yyyy-MM-dd', new Date());
         if (isValid(parsedDate)) {
           setDisplayDate(parsedDate);
           setDateError(null);
         } else {
-          console.warn(`[DatePicker] Data inválida: ${value}`);
+          console.warn(`[DatePicker] Data inválida recebida (esperado yyyy-MM-dd): ${value}`);
           setDisplayDate(undefined);
           setDateError("Formato de data inválido");
         }
@@ -57,14 +58,15 @@ export function DatePicker({
   const handleDateSelect = (date: Date | undefined) => {
     try {
       if (!date) {
-        onChange(null);
+        onChange(null); // Retorna null
         setDisplayDate(undefined);
         setDateError(null);
       } else if (isValid(date)) {
+        // Formata o Date selecionado para yyyy-MM-dd antes de chamar onChange
         const formattedDate = format(date, 'yyyy-MM-dd');
-        console.log(`[DatePicker] Data formatada: ${formattedDate}`);
-        onChange(formattedDate);
-        setDisplayDate(date);
+        console.log(`[DatePicker] Data formatada para onChange: ${formattedDate}`);
+        onChange(formattedDate); // Retorna string yyyy-MM-dd
+        setDisplayDate(date); // Mantém Date para exibição
         setDateError(null);
       } else {
         setDateError("Data inválida selecionada");
@@ -74,14 +76,16 @@ export function DatePicker({
       setDateError("Erro ao processar data");
     }
     
-    setIsCalendarOpen(false);
+    setIsCalendarOpen(false); // Fecha o calendário após seleção
   };
 
   return (
+    // Voltar a usar div simples, sem Popover completo
     <div className={cn("relative", className)}>
       <div 
         className={cn(
           "flex items-center border border-input rounded-md p-2 cursor-pointer",
+          "h-10", // Altura padrão do input shadcn
           !displayDate && "text-muted-foreground",
           dateError && "border-red-500",
           disabled && "opacity-50 cursor-not-allowed"
@@ -90,16 +94,18 @@ export function DatePicker({
       >
         <CalendarIcon className="mr-2 h-4 w-4" />
         {displayDate 
+          // Formata o Date interno para dd/MM/yyyy para exibição
           ? format(displayDate, "dd/MM/yyyy", { locale: ptBR }) 
           : <span>{placeholder}</span>
         }
       </div>
       
+      {/* Popover simples para o calendário */}
       {isCalendarOpen && !disabled && (
-        <div className="absolute z-50 mt-1 bg-popover rounded-md shadow-md">
+        <div className="absolute z-50 mt-1 bg-popover rounded-md shadow-md border">
           <Calendar
             mode="single"
-            selected={displayDate}
+            selected={displayDate} // Usa o Date interno
             onSelect={handleDateSelect}
             initialFocus
             locale={ptBR}

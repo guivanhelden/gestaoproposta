@@ -1,91 +1,47 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useLocation } from "wouter";
-import Header from "@/components/layout/header";
-import Sidebar from "@/components/layout/sidebar";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
-import { useKanbanBoards } from "@/hooks/use-kanban-boards";
-import { Loader2 } from "lucide-react";
+import { PlusCircle } from "lucide-react";
+import { useKanbanBoards } from '@/hooks/use-kanban-boards';
 
-export default function Quadros() {
-  const [, navigate] = useLocation();
+export default function QuadrosPage() {
+  const [location, navigate] = useLocation();
+  const [isBoardModalOpen, setIsBoardModalOpen] = useState(false);
   const { boards, isLoading, error } = useKanbanBoards();
 
-  return (
-    <div className="min-h-screen w-full flex flex-col">
-      <Header />
-      
-      <div className="flex flex-1 overflow-hidden">
-        <Sidebar />
-        
-        <main className="flex-1 overflow-y-auto">
-          <div className="p-6">
-            <div className="mb-6">
-              <h2 className="text-2xl font-bold text-gray-800">Quadros de Propostas</h2>
-              <p className="text-gray-600">Visualize e gerencie propostas por estágio e modalidade</p>
-            </div>
+  const handleOpenBoardModal = () => setIsBoardModalOpen(true);
+  const handleCloseBoardModal = () => setIsBoardModalOpen(false);
 
-            {isLoading ? (
-              <div className="flex justify-center items-center py-20">
-                <Loader2 className="h-8 w-8 animate-spin text-primary mr-2" />
-                <span>Carregando quadros...</span>
-              </div>
-            ) : error ? (
-              <div className="bg-red-50 border border-red-200 rounded-lg p-6 text-center">
-                <h3 className="text-red-800 font-medium mb-2">Erro ao carregar quadros</h3>
-                <p className="text-red-600">
-                  {error instanceof Error ? error.message : 'Ocorreu um erro desconhecido'}
-                </p>
-                <Button variant="outline" className="mt-4" onClick={() => window.location.reload()}>
-                  Tentar novamente
-                </Button>
-              </div>
-            ) : boards?.length === 0 ? (
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-8 text-center">
-                <h3 className="text-blue-800 font-medium mb-2">Nenhum quadro encontrado</h3>
-                <p className="text-blue-600 mb-6">
-                  Você ainda não tem quadros criados. Comece criando seu primeiro quadro.
-                </p>
-                <Button onClick={() => navigate("/quadros/gerenciador")}>
-                  Ir para o Gerenciador de Quadros
-                </Button>
-              </div>
-            ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {boards?.map(board => (
-                  <Card key={board.id} className="hover:shadow-md transition-shadow">
-                    <CardContent className="p-6">
-                      <h3 className="text-xl font-semibold mb-4 text-primary">{board.title}</h3>
-                      <p className="text-gray-600 mb-6">
-                        {board.description || `Quadro para gerenciamento de propostas - ${board.type}`}
-                      </p>
-                      <Button 
-                        className="w-full"
-                        onClick={() => navigate(`/quadros/visualizar/${board.id}`)}
-                      >
-                        Acessar Quadro
-                      </Button>
-                    </CardContent>
-                  </Card>
-                ))}
-                
-                <Card className="border-dashed border-2 hover:shadow-md transition-shadow bg-gray-50">
-                  <CardContent className="p-6 flex flex-col items-center justify-center h-full">
-                    <h3 className="text-xl font-semibold mb-4 text-gray-600">Criar Novo Quadro</h3>
-                    <Button 
-                      variant="outline"
-                      onClick={() => navigate("/quadros/gerenciador")}
-                      className="w-full"
-                    >
-                      Gerenciar Quadros
-                    </Button>
-                  </CardContent>
-                </Card>
-              </div>
-            )}
-          </div>
-        </main>
+  return (
+    <div className="p-4 md:p-6 lg:p-8">
+      <div className="flex justify-between items-center mb-6">
+        <h1 className="text-2xl font-semibold">Gerenciador de Quadros</h1>
+        <Button onClick={handleOpenBoardModal}>
+          <PlusCircle className="mr-2 h-4 w-4" /> Criar Novo Quadro
+        </Button>
       </div>
+      
+      {isLoading && <div>Carregando quadros...</div>}
+      {error && <div className="text-red-500">Erro ao carregar quadros: {error.message}</div>}
+      {boards && boards.length > 0 && (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {boards.map(board => (
+            <div key={board.id} className="border p-4 rounded shadow hover:shadow-md cursor-pointer" onClick={() => navigate(`/quadros/visualizar/${board.id}`)}>
+              <h3 className="font-medium">{board.title}</h3>
+            </div>
+          ))}
+        </div>
+      )}
+      {boards && boards.length === 0 && (
+        <div className="text-center text-gray-500 mt-8">
+           Nenhum quadro encontrado. Crie um novo!
+        </div>
+      )}
+
+      <BoardManagerDialog 
+        isOpen={isBoardModalOpen} 
+        onClose={handleCloseBoardModal} 
+      />
     </div>
   );
 }

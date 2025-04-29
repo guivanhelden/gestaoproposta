@@ -17,7 +17,6 @@ export const proposalSchema = z.object({
   plan_name: z.string().nullable().optional(),
   modality: z.string().nullable().optional(),
   lives: z.number().min(1, "Número de vidas deve ser pelo menos 1").optional(),
-  due_date: z.string().nullable().optional(), // Pode precisar de validação de data aqui
   observacoes: z.string().nullable().optional(),
 
   // Campos de pme_companies (usados nos forms)

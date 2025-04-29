@@ -1,4 +1,4 @@
-import React, { useRef, useEffect, useState } from "react";
+import React, { useRef, useEffect } from "react";
 import { useForm, SubmitHandler } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import {
@@ -7,7 +7,8 @@ import {
   Building2,
   FileSpreadsheet,
   Users,
-  MessageSquare // Adicionada importação
+  MessageSquare,
+  CalendarClock
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog as MainDialog, DialogContent as MainDialogContent, DialogHeader as MainDialogHeader } from "@/components/ui/dialog";
@@ -15,8 +16,17 @@ import { Form, FormControl, FormField, FormItem, FormMessage } from "@/component
 import { Textarea } from "@/components/ui/textarea";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-
-// Componentes extraídos 
+import { formatDate, getStatusBadge } from "@/lib/utils/proposal-utils";
+import { formatPartnerForUI, Partner as PartnerUI } from "@/lib/utils/partner-utils";
+import { KanbanComments } from "./KanbanComments";
+import KanbanDueDate from "./KanbanDueDate";
+import { useProposalDetails } from "@/hooks/use-proposal-details";
+import { useKanbanCards } from "@/hooks/use-kanban-cards";
+import { useToast } from "@/hooks/use-toast";
+import { proposalSchema, ProposalFormData } from "@/lib/schemas/proposalSchema";
+import { useAuth } from '@/hooks/use-auth';
+import supabase from "../../lib/supabase";
+import { Database, KanbanCommentWithProfile } from "@/lib/database.types";
 import { CardModalHeader } from "./CardModalHeader";
 import ProposalGeneralInfo from "./ProposalGeneralInfo";
 import ProposalContractDetails from "./ProposalContractDetails";
@@ -24,26 +34,9 @@ import CompanyDataForm from "./CompanyDataForm";
 import GracePeriodForm from "./GracePeriodForm";
 import StageDataDisplay from './StageDataDisplay';
 import BeneficiariesList from "./BeneficiariesList";
-import { KanbanComments } from "./KanbanComments";
-
-// Diálogos extraídos para gerenciar sócios e beneficiários
 import { PartnerDialogManager } from './dialogs/PartnerDialogManager';
-// import BeneficiaryDialogManager from './dialogs/BeneficiaryDialogManager'; // Comentado, pois a importação nomeada abaixo é a correta
 import { BeneficiaryDialogManager } from './dialogs/BeneficiaryDialogManager';
-
-// Hooks personalizados e utilidades
-import { useProposalDetails } from "@/hooks/use-proposal-details";
-import { formatDate, getStatusBadge } from "@/lib/utils/proposal-utils";
-import { formatPartnerForUI, Partner as PartnerUI } from "@/lib/utils/partner-utils";
-
-// Hooks e tipos
 import { KanbanCard } from "@/hooks/use-kanban-cards";
-import { useKanbanCards } from "@/hooks/use-kanban-cards";
-import { useToast } from "@/hooks/use-toast";
-import { proposalSchema, ProposalFormData } from "@/lib/schemas/proposalSchema";
-import { useAuth } from '@/hooks/use-auth';
-import supabase from "../../lib/supabase";
-import { Database, KanbanCommentWithProfile } from "@/lib/database.types";
 
 // Tipos do Supabase
 type PmePartner = Database['public']['Tables']['pme_company_partners']['Row'];
@@ -123,7 +116,7 @@ export default function CardModalSupabase({
       }
       
       // 2. Extrai os user_ids únicos dos comentários
-      const userIds = [...new Set(commentsData.map(comment => comment.user_id))];
+      const userIds = Array.from(new Set(commentsData.map(comment => comment.user_id)));
       
       // 3. Busca os perfis correspondentes
       const { data: profilesData, error: profilesError } = await supabase
@@ -167,7 +160,6 @@ export default function CardModalSupabase({
       plan_name: null,
       modality: null,
       lives: undefined,  // Apenas em pme_contracts
-      due_date: card.due_date || null, 
       observacoes: card.observacoes || "", 
 
       cnpj: null,
@@ -216,7 +208,6 @@ export default function CardModalSupabase({
         plan_name: proposalDetails.submission?.plan_name || null,
         modality: proposalDetails.submission?.modality || null,
         lives: contract?.lives ?? undefined,  // Campo lives do contrato
-        due_date: card.due_date || null,  // Mantido (campo do kanban_cards)
         observacoes: card.observacoes || proposalDetails.grace_period?.reason || "", 
 
         cnpj: proposalDetails.company?.cnpj || null,
@@ -254,7 +245,6 @@ export default function CardModalSupabase({
         operator_id: undefined,
         operator: card.operator || "",
         lives: undefined,  // Alterado para undefined em vez de null
-        due_date: card.due_date || null,
         observacoes: card.observacoes || "",
         contract_value: undefined, // Adicionado para manter consistência
       });
@@ -492,7 +482,7 @@ export default function CardModalSupabase({
         <MainDialogContent className="max-w-7xl max-h-[90vh] overflow-y-auto"> 
           <MainDialogHeader>
             <CardModalHeader 
-              title={form.watch("razao_social") || form.watch("razao_social") || card.company_name || "Detalhes da Proposta"}
+              title={form.watch("razao_social") || form.watch("company_name") || "Detalhes da Proposta"}
               statusBadge={statusBadgeInfo}
               brokerInfo={{
                 name: form.watch("broker_name"),
@@ -517,13 +507,11 @@ export default function CardModalSupabase({
                       <div className="space-y-2"><Skeleton className="h-4 w-1/4" /><Skeleton className="h-10 w-full" /></div>
                       <div className="space-y-2"><Skeleton className="h-4 w-1/4" /><Skeleton className="h-10 w-full" /></div>
                       <div className="space-y-2"><Skeleton className="h-4 w-1/4" /><Skeleton className="h-10 w-full" /></div>
-                      <div className="space-y-2"><Skeleton className="h-4 w-1/4" /><Skeleton className="h-10 w-full" /></div>
                     </div>
                   </div>
                   <div>
                     <Skeleton className="h-6 w-1/3 mt-6 mb-4" />
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                      <div className="space-y-2"><Skeleton className="h-4 w-1/4" /><Skeleton className="h-10 w-full" /></div>
                       <div className="space-y-2"><Skeleton className="h-4 w-1/4" /><Skeleton className="h-10 w-full" /></div>
                       <div className="space-y-2"><Skeleton className="h-4 w-1/4" /><Skeleton className="h-10 w-full" /></div>
                       <div className="space-y-2"><Skeleton className="h-4 w-1/4" /><Skeleton className="h-10 w-full" /></div>
@@ -626,6 +614,23 @@ export default function CardModalSupabase({
             
             {/* Coluna da direita (Dados da Etapa e Comentários) */}
             <div className="md:col-span-1 flex flex-col gap-6">
+              {/* Card Data de Vencimento (usando o novo componente) */}
+              {card && card.id && boardId ? (
+                <KanbanDueDate 
+                  cardId={card.id} 
+                  boardId={boardId} 
+                  initialDueDate={card.due_date} 
+                  initialStatus={card.due_date_status} 
+                />
+              ) : (
+                // Placeholder ou Skeleton se cardId/boardId não estiverem disponíveis
+                <div className="p-4 bg-gradient-to-b from-muted/60 to-muted/30 rounded-md border shadow-sm h-fit">
+                   <Skeleton className="h-6 w-1/2 mb-4" />
+                   <Skeleton className="h-10 w-full mb-2" />
+                   <Skeleton className="h-5 w-1/3" />
+                </div>
+              )}
+              
               {/* Seção Dados da Etapa */}
               <div className="p-4 bg-gradient-to-b from-muted/60 to-muted/30 rounded-md border shadow-sm h-fit">
                 <h3 className="font-semibold mb-4 flex items-center gap-2">

@@ -6,11 +6,14 @@ import { useAuth } from '@/hooks/use-auth';
 export type KanbanCard = Database['public']['Tables']['kanban_cards']['Row'] & {
   operators: { logo_url: string | null } | null;
   stage: { id: string; title: string } | null;
+  cnpj?: string | null;
+  due_date_status?: string | null;
   pme_submissions?: {
     broker?: {
       id: number;
       name: string;
     } | null;
+    modality?: string | null;
   } | null;
 };
 
@@ -40,7 +43,10 @@ export function useKanbanCards(boardId: string) {
           *,
           stage:stage_id(id, title),
           operators ( logo_url ),
-          pme_submissions!submission_id(broker:broker_id(id, name))
+          pme_submissions!submission_id(
+            broker:broker_id(id, name),
+            modality
+          )
         `)
         .eq('board_id', boardId)
         .order('position', { ascending: true});

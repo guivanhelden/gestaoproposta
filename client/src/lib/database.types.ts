@@ -357,6 +357,7 @@ export type Database = {
           created_at: string
           created_by: string
           due_date: string | null
+          due_date_status: string | null
           has_comments: boolean
           has_documents: boolean
           has_warnings: boolean
@@ -379,6 +380,7 @@ export type Database = {
           created_at?: string
           created_by: string
           due_date?: string | null
+          due_date_status?: string | null
           has_comments?: boolean
           has_documents?: boolean
           has_warnings?: boolean
@@ -401,6 +403,7 @@ export type Database = {
           created_at?: string
           created_by?: string
           due_date?: string | null
+          due_date_status?: string | null
           has_comments?: boolean
           has_documents?: boolean
           has_warnings?: boolean
@@ -1696,6 +1699,10 @@ export type Database = {
         }
         Returns: boolean
       }
+      refresh_all_due_date_statuses: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
+      }
       update_proposal_details: {
         Args: { p_submission_id: string; p_form_data: Json }
         Returns: undefined
@@ -1709,6 +1716,10 @@ export type Database = {
     }
   }
 }
+
+export type KanbanCommentWithProfile = Database['public']['Tables']['kanban_comments']['Row'] & {
+  profiles: Database['public']['Tables']['profiles']['Row'] | null;
+};
 
 type DefaultSchema = Database[Extract<keyof Database, "public">]
 

@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Link, useLocation } from "wouter";
+import * as Collapsible from '@radix-ui/react-collapsible';
 import { useAuth } from "@/hooks/use-auth";
 import { useKanbanBoards } from "@/hooks/use-kanban-boards";
 import { cn } from "@/lib/utils";
@@ -17,23 +18,46 @@ import {
   ChevronDown,
   ChevronRight,
   SlidersHorizontal,
-  Loader2
+  Loader2,
+  LayoutDashboard,
+  PanelLeft,
+  LogOut,
+  User,
+  HelpCircle
 } from "lucide-react";
 
 import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { 
+  DropdownMenu, 
+  DropdownMenuContent, 
+  DropdownMenuItem, 
+  DropdownMenuLabel, 
+  DropdownMenuSeparator, 
+  DropdownMenuTrigger 
+} from "@/components/ui/dropdown-menu";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 type NavItemProps = {
   href: string;
-  icon?: React.ReactNode;
+  icon: React.ReactNode;
   children: React.ReactNode;
   isActive?: boolean;
-  isSubmenu?: boolean;
   isCollapsed?: boolean;
-  onClick?: () => void;
+  className?: string;
+};
+
+type NavGroupProps = {
+  title: string;
+  icon: React.ReactNode;
+  children: React.ReactNode;
+  isCollapsed?: boolean;
+  defaultOpen?: boolean;
 };
 
 type SidebarProps = {
-  isCollapsed?: boolean;
+  isCollapsed: boolean;
+  toggleSidebar: () => void;
 };
 
 const NavItem = ({
@@ -41,237 +65,367 @@ const NavItem = ({
   icon,
   children,
   isActive = false,
-  isSubmenu = false,
   isCollapsed = false,
-  onClick
+  className,
 }: NavItemProps) => {
   return (
     <Link
       href={href}
-      onClick={onClick}
       className={cn(
-        "navbar-item",
-        isActive && "active",
-        isSubmenu && "ml-7 text-xs py-1.5",
-        isCollapsed && "justify-center px-1"
+        "flex items-center text-sm font-medium rounded-md transition-colors duration-150",
+        "text-purple-100 hover:bg-purple-600 hover:text-white",
+        isActive ? "bg-purple-800 text-white" : "",
+        isCollapsed ? "justify-center h-10 w-10" : "px-3 py-2",
+        className
       )}
     >
-      {icon && (
-        <span className={cn(
-          "text-primary",
-          isCollapsed ? "w-auto m-0" : "w-5 mr-2"
-        )}>
-          {icon}
-        </span>
-      )}
-      {!isCollapsed && <span>{children}</span>}
+      <span className={cn("flex-shrink-0", isCollapsed ? "" : "mr-3")}>
+        {icon}
+      </span>
+      {!isCollapsed && <span className="truncate">{children}</span>}
     </Link>
   );
 };
 
-export default function Sidebar({ isCollapsed = false }: SidebarProps) {
-  const [location] = useLocation();
-  const { user } = useAuth();
-  const [searchQuery, setSearchQuery] = useState("");
-  const [expandedMenus, setExpandedMenus] = useState<{ [key: string]: boolean }>({
-    quadros: true
-  });
+const SubNavItem = ({
+  href,
+  children,
+  icon,
+  isActive = false,
+  className,
+}: { 
+  href: string;
+  children: React.ReactNode;
+  icon?: React.ReactNode;
+  isActive?: boolean;
+  className?: string; 
+}) => {
+  return (
+    <Link
+      href={href}
+      className={cn(
+        "flex items-center text-xs font-medium rounded-md transition-colors duration-150 py-1.5 pr-3",
+        "text-purple-200 hover:bg-purple-600 hover:text-white pl-10",
+        isActive ? "bg-purple-800 text-white" : "",
+        className
+      )}
+    >
+      {icon && <span className="mr-2 flex-shrink-0">{icon}</span>}
+      <span className="truncate">{children}</span>
+    </Link>
+  );
+};
 
-  // Buscar os quadros do banco de dados
+const NavGroup = ({ title, icon, children, isCollapsed = false, defaultOpen = false }: NavGroupProps) => {
+  const [isOpen, setIsOpen] = useState(defaultOpen);
+
+  if (isCollapsed) {
+    return (
+      <div className="flex justify-center h-10 w-10 items-center text-purple-100" title={title}>
+         <span className="flex-shrink-0">{icon}</span>
+      </div>
+    )
+  }
+
+  return (
+    <Collapsible.Root open={isOpen} onOpenChange={setIsOpen} className="space-y-1">
+      <Collapsible.Trigger asChild>
+         <Button
+            variant="ghost"
+            className={cn(
+              "flex items-center justify-between w-full text-sm font-medium rounded-md transition-colors duration-150",
+              "text-purple-100 hover:bg-purple-600 hover:text-white focus:bg-purple-600 focus:text-white",
+              "px-3 py-2"
+            )}
+          >
+            <div className="flex items-center">
+              <span className="mr-3 flex-shrink-0">{icon}</span>
+              <span className="truncate">{title}</span>
+            </div>
+            <span className="ml-auto">
+              {isOpen ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+            </span>
+         </Button>
+      </Collapsible.Trigger>
+      <Collapsible.Content className="overflow-hidden data-[state=open]:animate-collapsible-down data-[state=closed]:animate-collapsible-up">
+         <div className="pt-1 space-y-1">
+           {children}
+         </div>
+      </Collapsible.Content>
+    </Collapsible.Root>
+  );
+};
+
+const getInitials = (name: string) => {
+  if (!name) return "US";
+  return name
+    .split(" ")
+    .map(n => n[0])
+    .slice(0, 2)
+    .join("")
+    .toUpperCase();
+};
+
+export default function Sidebar({ isCollapsed, toggleSidebar }: SidebarProps) {
+  const [location, navigate] = useLocation();
+  const { user, logout } = useAuth();
+  const [searchQuery, setSearchQuery] = useState("");
+
   const { boards, isLoading: loadingBoards, error } = useKanbanBoards();
 
-  // Filtrar os quadros de acordo com a busca
-  const filteredBoards = boards?.filter(board => 
+  const filteredBoards = boards?.filter(board =>
     !searchQuery || board.title.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  const toggleMenu = (menu: string) => {
-    setExpandedMenus(prev => ({
-      ...prev,
-      [menu]: !prev[menu]
-    }));
+  const handleLogout = async () => {
+    await logout();
+    navigate("/auth");
   };
 
   return (
-    <aside className={`bg-white ${isCollapsed ? 'w-16' : 'w-64'} border-r border-gray-200 flex-shrink-0 transition-all duration-300 z-20 h-[calc(100vh-64px)] overflow-hidden`}>
-      <nav className="flex flex-col h-full py-4">
+    <aside className={cn(
+      "bg-purple-700 text-white flex flex-col flex-shrink-0 transition-all duration-300 ease-in-out",
+      "h-screen sticky top-0",
+      isCollapsed ? 'w-16' : 'w-64',
+      "shadow-2xl",
+      "z-20",
+      "rounded-r-2xl"
+    )}>
+      <div className={cn(
+        "flex items-center border-b border-purple-800 h-16",
+        isCollapsed ? "justify-center px-2" : "justify-between px-4"
+      )}>
         {!isCollapsed && (
-          <div className="px-4 mb-6">
+           <img 
+              src="https://doc.vhseguros.com.br/logos_vh/VAN-HELDEN-branco.png"
+              alt="VAN HELDEN" 
+              className="h-16 object-contain py-1 ml-4"
+            />
+        )}
+        {isCollapsed && (
+            <img 
+              src="https://doc.vhseguros.com.br/files/public_html/LogoVH%2Fvertical-logo-vh-branco.png"
+              alt="VH" 
+              className="h-8 object-contain py-1"
+            />
+        )}
+        <Button 
+          variant="ghost"
+          size="icon"
+          onClick={toggleSidebar}
+          className={cn(
+            "text-purple-200 hover:text-white hover:bg-purple-600",
+          )}
+          title={isCollapsed ? "Expandir menu" : "Recolher menu"}
+        >
+          <PanelLeft className="h-5 w-5" />
+        </Button>
+      </div>
+
+      <nav className="flex flex-col flex-1 overflow-y-auto p-2 space-y-1">
+        {!isCollapsed && (
+          <div className="px-1 pb-2">
             <div className="relative">
-              <Search className="absolute left-3 top-2.5 h-4 w-4 text-gray-400" />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-purple-300" />
               <Input
                 type="text"
                 placeholder="Buscar..."
-                className="pl-10 bg-neutral rounded-md text-sm"
+                className={cn(
+                  "pl-9 w-full h-9 text-sm rounded-md border-purple-600",
+                  "bg-purple-600 placeholder-purple-300 text-white focus:bg-purple-500 focus:ring-purple-500 focus:border-purple-500"
+                )}
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
               />
             </div>
           </div>
         )}
-        
-        <div className={cn(
-          "space-y-1 px-2 flex-1 overflow-y-auto",
-          isCollapsed && "px-1"
-        )}>
-          {/* Dashboard */}
-          <NavItem 
-            href="/dashboard" 
-            icon={<BarChart3 />} 
+
+        <div className="flex-1 space-y-1">
+          <NavItem
+            href="/dashboard"
+            icon={<LayoutDashboard size={20} />}
             isActive={location === "/dashboard"}
             isCollapsed={isCollapsed}
           >
             Dashboard
           </NavItem>
-          
-          {/* Quadros de Propostas */}
-          <div>
-            <div 
-              className={cn(
-                "navbar-item flex items-center cursor-pointer",
-                isCollapsed ? "justify-center px-1" : "justify-between px-3"
-              )}
-              onClick={() => toggleMenu("quadros")}
+
+          <NavGroup
+            title="Quadros"
+            icon={<Kanban size={20} />}
+            isCollapsed={isCollapsed}
+            defaultOpen={true}
+          >
+             <SubNavItem
+              href="/quadros/gerenciador"
+              icon={<SlidersHorizontal size={14} />}
+              isActive={location === "/quadros/gerenciador"}
             >
-              <div className="flex items-center">
-                <span className={cn(
-                  "text-primary",
-                  isCollapsed ? "w-auto m-0" : "w-5 mr-2"
-                )}>
-                  <Kanban />
-                </span>
-                {!isCollapsed && <span>Quadros de Propostas</span>}
-              </div>
-              {!isCollapsed && (
-                <span>
-                  {expandedMenus.quadros ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
-                </span>
-              )}
-            </div>
-            
-            {expandedMenus.quadros && !isCollapsed && (
-              <div className="space-y-1 mt-1">
-                <NavItem 
-                  href="/quadros/gerenciador" 
-                  isSubmenu 
-                  isActive={location === "/quadros/gerenciador"}
-                >
-                  <span className="flex items-center">
-                    <SlidersHorizontal className="h-3 w-3 mr-2" />
-                    Gerenciador de Quadros
-                  </span>
-                </NavItem>
-                
-                <div className="border-t border-gray-100 my-2"></div>
-                
-                {/* Estado de carregamento dos quadros */}
-                {loadingBoards && (
-                  <div className="flex justify-center py-2">
-                    <Loader2 className="h-4 w-4 animate-spin text-primary" />
-                  </div>
-                )}
-                
-                {/* Erro ao carregar quadros */}
-                {error && (
-                  <div className="px-2 py-1 text-xs text-red-500">
-                    Erro ao carregar quadros
-                  </div>
-                )}
-                
-                {/* Lista de quadros dinâmica do banco de dados */}
-                {filteredBoards?.map(board => (
-                  <NavItem 
-                    key={board.id}
-                    href={`/quadros/visualizar/${board.id}`} 
-                    isSubmenu 
-                    isActive={location === `/quadros/visualizar/${board.id}`}
-                  >
-                    {board.title}
-                  </NavItem>
-                ))}
-                
-                {/* Mensagem se não houver quadros */}
-                {filteredBoards?.length === 0 && !loadingBoards && !error && (
-                  <div className="px-2 py-1 text-xs text-gray-500">
-                    Nenhum quadro encontrado
-                  </div>
-                )}
+              Gerenciador
+             </SubNavItem>
+
+            {!isCollapsed && <hr className="border-t border-purple-600 my-1 mx-3" />}
+
+            {loadingBoards && !isCollapsed && (
+              <div className="flex justify-center items-center py-2 px-3 text-purple-200">
+                <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                <span className="text-xs">Carregando...</span>
               </div>
             )}
-          </div>
-          
-          {/* E-mails */}
-          <NavItem 
-            href="/emails" 
-            icon={<Mail />} 
+            {error && !isCollapsed && (
+              <div className="px-3 py-1 text-xs text-red-300">
+                Erro ao carregar quadros
+              </div>
+            )}
+            {filteredBoards?.map(board => (
+              <SubNavItem
+                key={board.id}
+                href={`/quadros/visualizar/${board.id}`}
+                isActive={location === `/quadros/visualizar/${board.id}`}
+              >
+                {board.title}
+              </SubNavItem>
+            ))}
+            {filteredBoards?.length === 0 && !loadingBoards && !error && !isCollapsed && (
+              <div className="px-3 py-1 text-xs text-purple-300">
+                Nenhum quadro.
+              </div>
+            )}
+           </NavGroup>
+
+          <NavItem
+            href="/emails"
+            icon={<Mail size={20} />}
             isActive={location === "/emails"}
             isCollapsed={isCollapsed}
           >
             E-mails
           </NavItem>
-          
-          {/* Operadoras */}
-          <NavItem 
-            href="/operadoras" 
-            icon={<Building />} 
+
+          <NavItem
+            href="/operadoras"
+            icon={<Building size={20} />}
             isActive={location === "/operadoras"}
             isCollapsed={isCollapsed}
           >
             Operadoras
           </NavItem>
-          
-          {/* Administradoras */}
-          <NavItem 
-            href="/administradoras" 
-            icon={<Briefcase />} 
+
+          <NavItem
+            href="/administradoras"
+            icon={<Briefcase size={20} />}
             isActive={location === "/administradoras"}
             isCollapsed={isCollapsed}
           >
-            Administradoras
+            Admin.
           </NavItem>
-          
-          {/* Equipes */}
-          <NavItem 
-            href="/equipes" 
-            icon={<Users />} 
+
+           <NavItem
+            href="/equipes"
+            icon={<Users size={20} />}
             isActive={location === "/equipes"}
             isCollapsed={isCollapsed}
           >
             Equipes
           </NavItem>
-          
-          {/* Corretores */}
-          <NavItem 
-            href="/corretores" 
-            icon={<UserRoundCheck />} 
+
+          <NavItem
+            href="/corretores"
+            icon={<UserRoundCheck size={20} />}
             isActive={location === "/corretores"}
             isCollapsed={isCollapsed}
           >
             Corretores
           </NavItem>
         </div>
-        
-        <div className={cn("mt-6", isCollapsed ? "px-1" : "px-3")}>
-          {/* Ajustes */}
-          <NavItem 
-            href="/ajustes" 
-            icon={<Settings />} 
+
+        <div className="mt-auto space-y-1 pt-2 border-t border-purple-800">
+           <NavItem
+            href="/ajustes"
+            icon={<Settings size={20} />}
             isActive={location === "/ajustes"}
             isCollapsed={isCollapsed}
           >
             Ajustes
           </NavItem>
-          
-          {/* Informações - mostrar apenas se não estiver recolhido */}
-          {!isCollapsed && (
-            <div className="px-3 py-4 mt-4 bg-neutral rounded-lg">
-              <div className="text-xs font-semibold text-gray-600 mb-2">Informações</div>
-              <div className="text-xs text-gray-500">
-                <p>VH Saúde 2.0</p>
-                <p>Versão 1.0.0</p>
-              </div>
-            </div>
+
+          {!isCollapsed && user && (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" className="w-full justify-start px-3 py-2 mt-1 text-purple-100 hover:bg-purple-600 hover:text-white">
+                  <Avatar className="h-7 w-7 mr-2"> 
+                    <AvatarImage src={user.avatar_url || undefined} alt={user.name || "Usuário"} />
+                    <AvatarFallback className="bg-purple-500 text-xs">{getInitials(user.name || "")}</AvatarFallback>
+                  </Avatar>
+                  <div className="flex-1 text-left truncate">
+                    <div className="text-sm font-medium leading-tight">{user.name || "Usuário"}</div>
+                    <div className="text-xs text-purple-300 capitalize truncate">{user.roles?.[0] || "Usuário"}</div>
+                  </div>
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent side="right" align="start" className="mb-2 ml-2 w-56 bg-white text-gray-800">
+                 <DropdownMenuLabel>Minha Conta</DropdownMenuLabel>
+                 <DropdownMenuSeparator />
+                 <DropdownMenuItem className="cursor-pointer" onClick={() => navigate('/perfil')}>
+                   <User className="mr-2 h-4 w-4" />
+                   Perfil
+                 </DropdownMenuItem>
+                 <DropdownMenuItem className="cursor-pointer" onClick={() => navigate('/ajustes')}>
+                   <Settings className="mr-2 h-4 w-4" />
+                   Configurações
+                 </DropdownMenuItem>
+                 <DropdownMenuItem className="cursor-pointer" onClick={() => navigate('/ajuda')}>
+                   <HelpCircle className="mr-2 h-4 w-4" />
+                   Ajuda
+                 </DropdownMenuItem>
+                 <DropdownMenuSeparator />
+                 <DropdownMenuItem 
+                   className="cursor-pointer text-red-500 focus:text-red-600 focus:bg-red-50"
+                   onClick={handleLogout}
+                 >
+                   <LogOut className="mr-2 h-4 w-4" />
+                   Sair
+                 </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           )}
+           {isCollapsed && user && (
+             <DropdownMenu>
+               <DropdownMenuTrigger asChild>
+                 <Button variant="ghost" size="icon" className="h-10 w-10 rounded-full text-purple-100 hover:bg-purple-600">
+                   <Avatar className="h-7 w-7"> 
+                     <AvatarImage src={user.avatar_url || undefined} alt={user.name || "Usuário"} />
+                     <AvatarFallback className="bg-purple-500 text-xs">{getInitials(user.name || "")}</AvatarFallback>
+                   </Avatar>
+                 </Button>
+               </DropdownMenuTrigger>
+               <DropdownMenuContent side="right" align="start" className="ml-2 w-56 bg-white text-gray-800">
+                  <DropdownMenuLabel>Minha Conta</DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem className="cursor-pointer" onClick={() => navigate('/perfil')}>
+                    <User className="mr-2 h-4 w-4" />
+                    Perfil
+                  </DropdownMenuItem>
+                  <DropdownMenuItem className="cursor-pointer" onClick={() => navigate('/ajustes')}>
+                    <Settings className="mr-2 h-4 w-4" />
+                    Configurações
+                  </DropdownMenuItem>
+                  <DropdownMenuItem className="cursor-pointer" onClick={() => navigate('/ajuda')}>
+                    <HelpCircle className="mr-2 h-4 w-4" />
+                    Ajuda
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem 
+                    className="cursor-pointer text-red-500 focus:text-red-600 focus:bg-red-50"
+                    onClick={handleLogout}
+                  >
+                    <LogOut className="mr-2 h-4 w-4" />
+                    Sair
+                  </DropdownMenuItem>
+               </DropdownMenuContent>
+             </DropdownMenu>
+           )}
         </div>
       </nav>
     </aside>

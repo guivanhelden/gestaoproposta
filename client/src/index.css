@@ -150,3 +150,30 @@
 .navbar-item.justify-center.active {
   @apply border-r-0 border-l-[3px];
 }
+
+/* Custom Scrollbar for Sidebar Navigation */
+/* WebKit Browsers (Chrome, Safari, Edge) */
+aside.bg-purple-700 > nav::-webkit-scrollbar {
+  width: 6px; /* Largura da barra */
+}
+
+aside.bg-purple-700 > nav::-webkit-scrollbar-track {
+  background: #581c87; /* Cor de fundo da trilha (um pouco mais escura que o fundo) */
+  border-radius: 10px;
+}
+
+aside.bg-purple-700 > nav::-webkit-scrollbar-thumb {
+  background-color: #a855f7; /* Cor do "polegar" (roxo mais claro) */
+  border-radius: 10px;
+  border: 1px solid #581c87; /* Borda sutil na cor da trilha */
+}
+
+aside.bg-purple-700 > nav::-webkit-scrollbar-thumb:hover {
+  background-color: #9333ea; /* Cor do "polegar" ao passar o mouse (um pouco mais escuro) */
+}
+
+/* Firefox */
+aside.bg-purple-700 > nav {
+  scrollbar-width: thin; /* Barra fina */
+  scrollbar-color: #a855f7 #581c87; /* Cor do polegar e da trilha */
+}

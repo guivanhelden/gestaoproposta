@@ -81,24 +81,6 @@ export default function ProposalGeneralInfo({ control, operatorsList }: Proposal
               </FormItem>
             )}
           />
-          <FormField
-            control={control}
-            name="due_date"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Vigência</FormLabel>
-                <FormControl>
-                  <DatePicker 
-                    value={field.value}
-                    onChange={field.onChange}
-                    placeholder="Selecione a data de vigência"
-                    disabled={field.disabled}
-                  />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
         </div>
       </CardContent>
     </Card>
