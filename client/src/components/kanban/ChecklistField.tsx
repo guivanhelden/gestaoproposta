@@ -4,6 +4,12 @@ import { Database, Json } from '@/lib/database.types';
 import supabase from '@/lib/supabase';
 import { Checkbox } from '@/components/ui/checkbox';
 import { toast } from 'sonner';
+import { CheckCircle, Circle, Loader2, AlertCircle } from 'lucide-react';
+import { cn } from '@/lib/utils';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Badge } from '@/components/ui/badge';
+import { Card } from '@/components/ui/card';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 type DefaultChecklistItem = {
   id: string;
@@ -166,47 +172,132 @@ const ChecklistField: React.FC<ChecklistFieldProps> = ({ cardId, fieldId }) => {
   const isLoading = isLoadingField || isLoadingStates;
   const error = errorField || errorStates;
 
-  if (isLoading) return <div>Carregando checklist...</div>;
-  if (error) return <div className="text-red-500">Erro ao carregar checklist: {error.message}</div>;
-  if (!stageField) return <div className="text-muted-foreground">Campo não encontrado.</div>;
-  if (stageField.field_type !== 'checklist') return <div className="text-red-500">Erro: Este campo não é do tipo checklist.</div>;
-  if (defaultItems.length === 0) return <div className="text-muted-foreground text-sm">Nenhum item de checklist configurado para este campo.</div>
+  if (isLoading) return (
+    <div className="flex items-center justify-center py-3 text-muted-foreground animate-pulse">
+      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+      <span className="text-sm">Carregando checklist...</span>
+    </div>
+  );
+  
+  if (error) return (
+    <div className="flex items-center justify-center py-2 text-destructive rounded-md bg-destructive/10 px-3">
+      <AlertCircle className="h-4 w-4 mr-2" />
+      <span className="text-sm">Erro ao carregar checklist: {error.message}</span>
+    </div>
+  );
+  
+  if (!stageField) return (
+    <div className="flex items-center justify-center py-3 text-muted-foreground">
+      <span className="text-sm">Campo não encontrado</span>
+    </div>
+  );
+  
+  if (stageField.field_type !== 'checklist') return (
+    <div className="flex items-center justify-center py-2 text-destructive rounded-md bg-destructive/10 px-3">
+      <AlertCircle className="h-4 w-4 mr-2" />
+      <span className="text-sm">Erro: Este campo não é do tipo checklist</span>
+    </div>
+  );
+  
+  if (defaultItems.length === 0) return (
+    <div className="flex items-center justify-center py-3 text-muted-foreground">
+      <span className="text-sm">Nenhum item de checklist configurado</span>
+    </div>
+  );
 
   const totalItems = displayItems.length;
   const completedItems = displayItems.filter(item => item.is_checked).length;
   const progress = totalItems > 0 ? (completedItems / totalItems) * 100 : 0;
 
   return (
-    <div className="space-y-2 w-full">
-      {totalItems > 0 && (
-        <div className="w-full bg-gray-200 rounded-full h-1.5 dark:bg-gray-700 mb-2">
-          <div className="bg-blue-600 h-1.5 rounded-full" style={{ width: `${progress}%` }}></div>
-        </div>
-      )}
-
-      <div className="space-y-1">
-        {displayItems.map((item) => (
-          <div
-            key={item.id}
-            className="flex items-center space-x-2 p-1 rounded"
+    <Card className="w-full p-3 shadow-sm border border-border/50 bg-card/50">
+      <div className="space-y-3 w-full">
+        {/* Cabeçalho com progresso e contador */}
+        <div className="flex justify-between items-center mb-1">
+          <Badge 
+            variant={progress === 100 ? "outline" : "secondary"} 
+            className={cn(
+              "px-2 py-0 h-5", 
+              progress === 100 && "border-green-500 bg-green-50 text-green-700 dark:bg-green-900/20 dark:text-green-400 dark:border-green-500/30"
+            )}
           >
-            <Checkbox
-              id={`item-${item.id}`}
-              checked={item.is_checked}
-              onCheckedChange={() => handleToggleCheck(item.id, item.is_checked)}
-              className="flex-shrink-0"
-              disabled={updateStateMutation.isPending}
-            />
-            <label
-              htmlFor={`item-${item.id}`}
-              className={`flex-grow text-sm ${item.is_checked ? 'line-through text-muted-foreground' : ''} cursor-pointer`}
-            >
-              {item.text}
-            </label>
-          </div>
-        ))}
+            <span className="text-xs">{completedItems}/{totalItems}</span>
+          </Badge>
+          
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger className="cursor-default">
+                <span className="text-xs text-muted-foreground">
+                  {progress === 100 ? 'Completo' : `${Math.round(progress)}% concluído`}
+                </span>
+              </TooltipTrigger>
+              <TooltipContent side="top">
+                <p>Progresso do checklist</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        </div>
+        
+        {/* Barra de progresso animada */}
+        <div className="w-full bg-muted rounded-full h-1.5">
+          <motion.div 
+            className="bg-primary h-1.5 rounded-full" 
+            initial={{ width: 0 }}
+            animate={{ width: `${progress}%` }}
+            transition={{ duration: 0.5 }}
+          />
+        </div>
+        
+        {/* Itens do checklist com animações */}
+        <div className="space-y-1 pt-1">
+          <AnimatePresence initial={false}>
+            {displayItems.map((item) => (
+              <motion.div
+                key={item.id}
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, height: 0 }}
+                transition={{ duration: 0.2 }}
+                className={cn(
+                  "flex items-center gap-3 p-2 rounded-md transition-colors",
+                  item.is_checked 
+                    ? "bg-muted/50" 
+                    : "hover:bg-accent/30"
+                )}
+              >
+                <div className="flex-shrink-0">
+                  <Checkbox
+                    id={`item-${item.id}`}
+                    checked={item.is_checked}
+                    onCheckedChange={() => handleToggleCheck(item.id, item.is_checked)}
+                    className={cn(
+                      "transition-all duration-200",
+                      item.is_checked && "border-primary",
+                      updateStateMutation.isPending && "opacity-50"
+                    )}
+                    disabled={updateStateMutation.isPending}
+                  />
+                </div>
+                
+                <label
+                  htmlFor={`item-${item.id}`}
+                  className={cn(
+                    "flex-grow text-sm transition-all duration-200 cursor-pointer",
+                    item.is_checked && "line-through text-muted-foreground"
+                  )}
+                >
+                  {item.text}
+                </label>
+                
+                {updateStateMutation.isPending && updateStateMutation.variables?.itemId === item.id && (
+                  <Loader2 className="w-3.5 h-3.5 animate-spin text-muted-foreground ml-auto" />
+                )}
+              </motion.div>
+            ))}
+          </AnimatePresence>
+        </div>
       </div>
-    </div>
+    </Card>
   );
 };
 

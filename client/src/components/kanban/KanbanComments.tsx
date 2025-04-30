@@ -1,8 +1,8 @@
-import React from 'react';
+import React, { useRef, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useMutation, useQueryClient, useQuery } from '@tanstack/react-query';
-import supabase from "../../lib/supabase"; // Ajuste o caminho se necessário
+import supabase from "@/lib/supabase";
 import { toast } from 'sonner';
 import {
   Avatar,
@@ -23,6 +23,12 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { z } from 'zod';
+import { Card, CardContent } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { AlertCircle, Send, MessageCircle, Loader2, User } from 'lucide-react';
+import { Separator } from '@/components/ui/separator';
+import { cn } from '@/lib/utils';
+import { motion, AnimatePresence } from 'framer-motion';
 
 // Definições movidas de database.types.ts
 
@@ -137,76 +143,171 @@ export function KanbanComments({ cardId, userId }: KanbanCommentsProps) {
     addComment({ ...data, card_id: cardId, user_id: userId });
   };
 
-  return (
-    <div className="flex flex-col h-full space-y-4 pr-2">
-      <h3 className="text-lg font-semibold mb-2">Comentários</h3>
+  // Referência para o final da lista de comentários
+  const commentsEndRef = useRef<HTMLDivElement>(null);
+  
+  // Função para rolar para o comentário mais recente
+  const scrollToBottom = () => {
+    commentsEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  };
+  
+  // Rolar para baixo quando novos comentários são carregados
+  useEffect(() => {
+    if (comments && comments.length > 0 && !isLoadingComments) {
+      scrollToBottom();
+    }
+  }, [comments, isLoadingComments]);
 
-      <ScrollArea className="flex-grow h-[calc(100%-180px)] pr-4"> {/* Ajuste altura conforme necessário */}
+  return (
+    <Card className="flex flex-col h-full shadow-sm border-border/50 bg-card/50 overflow-hidden">
+      <div className="flex items-center justify-between p-3 border-b">
+        <div className="flex items-center gap-2">
+          <div className="flex items-center justify-center h-6 w-6 rounded-full bg-primary/10 text-primary">
+            <MessageCircle className="h-3.5 w-3.5" />
+          </div>
+          <h3 className="font-medium text-sm">Comentários</h3>
+        </div>
+        
+        {comments && comments.length > 0 && (
+          <Badge variant="outline" className="text-xs font-normal">
+            {comments.length} {comments.length === 1 ? 'comentário' : 'comentários'}
+          </Badge>
+        )}
+      </div>
+
+      <ScrollArea className="flex-grow h-[calc(100%-140px)] p-3" scrollHideDelay={300}>
         <div className="space-y-4">
           {isLoadingComments ? (
-            Array.from({ length: 3 }).map((_, index) => (
-              <div key={index} className="flex items-start space-x-3">
-                <Skeleton className="h-10 w-10 rounded-full" />
-                <div className="space-y-1 flex-1">
-                  <Skeleton className="h-4 w-1/4" />
-                  <Skeleton className="h-4 w-3/4" />
-                  <Skeleton className="h-4 w-1/2" />
-                </div>
-              </div>
-            ))
-          ) : comments && comments.length > 0 ? (
-            comments.map((comment) => (
-              <div key={comment.id} className="flex items-start space-x-3">
-                <Avatar className="h-10 w-10">
-                  <AvatarImage src={comment.profiles?.avatar_url ?? undefined} alt={comment.profiles?.name ?? 'Usuário'} />
-                  <AvatarFallback>{getInitials(comment.profiles?.name)}</AvatarFallback>
-                </Avatar>
-                <div className="flex-1 space-y-1">
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm font-medium text-gray-900 dark:text-gray-100">
-                      {comment.profiles?.name ?? 'Usuário desconhecido'}
-                    </span>
-                    <div className="text-xs text-muted-foreground">
-                      {formatDistanceToNow(new Date(comment.created_at), { addSuffix: true, locale: ptBR })}
+            <div className="space-y-4">
+              {Array.from({ length: 3 }).map((_, index) => (
+                <div key={index} className="flex items-start gap-3 animate-pulse">
+                  <Skeleton className="h-9 w-9 rounded-full flex-shrink-0" />
+                  <div className="space-y-1.5 flex-1">
+                    <div className="flex justify-between">
+                      <Skeleton className="h-4 w-28" />
+                      <Skeleton className="h-3 w-16" />
                     </div>
+                    <Skeleton className="h-16 w-full rounded-md" />
                   </div>
-                  <p className="text-sm text-muted-foreground whitespace-pre-wrap break-words">{comment.content}</p>
                 </div>
+              ))}
+            </div>
+          ) : comments && comments.length > 0 ? (
+            <AnimatePresence initial={false}>
+              <div className="space-y-5">
+                {comments.map((comment, index) => (
+                  <motion.div 
+                    key={comment.id}
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.3, delay: index * 0.05 }}
+                    className={cn(
+                      "group relative",
+                      comment.user_id === userId && "ml-2"
+                    )}
+                  >
+                    <div className="flex items-start gap-3">
+                      <Avatar className={cn(
+                        "h-9 w-9 border-2 border-background",
+                        comment.user_id === userId ? "ring-1 ring-primary" : ""  
+                      )}>
+                        <AvatarImage 
+                          src={comment.profiles?.avatar_url ?? undefined} 
+                          alt={comment.profiles?.name ?? 'Usuário'} 
+                        />
+                        <AvatarFallback className="bg-primary/10 text-primary">
+                          {getInitials(comment.profiles?.name)}
+                        </AvatarFallback>
+                      </Avatar>
+                      
+                      <div className={cn(
+                        "flex-1 space-y-1.5 p-3 rounded-lg",
+                        comment.user_id === userId 
+                          ? "bg-primary/5 border border-primary/10" 
+                          : "bg-muted/30 border border-border/50"
+                      )}>
+                        <div className="flex items-center justify-between">
+                          <span className={cn(
+                            "text-sm font-medium",
+                            comment.user_id === userId ? "text-primary" : "text-foreground"  
+                          )}>
+                            {comment.profiles?.name ?? 'Usuário desconhecido'}
+                            {comment.user_id === userId && (
+                              <Badge variant="outline" className="ml-2 py-0 h-4 text-[10px]">
+                                Você
+                              </Badge>
+                            )}
+                          </span>
+                          <div className="text-xs text-muted-foreground">
+                            {formatDistanceToNow(new Date(comment.created_at), { addSuffix: true, locale: ptBR })}
+                          </div>
+                        </div>
+                        <p className="text-sm whitespace-pre-wrap break-words">
+                          {comment.content}
+                        </p>
+                      </div>
+                    </div>
+                    
+                    {index < comments.length - 1 && (
+                      <div className="absolute left-4 top-9 w-[1px] h-[calc(100%)]" 
+                        style={{
+                          background: "linear-gradient(to bottom, transparent, var(--border), transparent)"
+                        }}
+                      />
+                    )}
+                  </motion.div>
+                ))}
+                <div ref={commentsEndRef} /> {/* Elemento para rolar até o fim */}
               </div>
-            ))
+            </AnimatePresence>
           ) : (
-            <p className="text-sm text-gray-500 dark:text-gray-400 text-center py-4">
-              Nenhum comentário ainda.
-            </p>
+            <div className="flex flex-col items-center justify-center py-10 text-center">
+              <div className="rounded-full bg-muted/50 p-3 mb-3">
+                <MessageCircle className="h-10 w-10 text-muted-foreground opacity-50" />
+              </div>
+              <p className="text-muted-foreground">Nenhum comentário ainda</p>
+              <p className="text-xs text-muted-foreground mt-1">Seja o primeiro a comentar</p>
+            </div>
           )}
         </div>
       </ScrollArea>
 
-      <Form {...form}>
-        <form onSubmit={form.handleSubmit(onSubmit)} className="flex flex-col space-y-3 pt-2 border-t">
+      <div className="p-3 border-t bg-card">
+        <Form {...form}>
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-3">
             <FormField
-                control={form.control}
-                name="content"
-                render={({ field }) => (
+              control={form.control}
+              name="content"
+              render={({ field }) => (
                 <FormItem>
-                    {/* <FormLabel>Novo Comentário</FormLabel> */}
-                    <FormControl>
-                    <Textarea
+                  <FormControl>
+                    <div className="relative">
+                      <Textarea
                         placeholder="Adicione um comentário..."
-                        className="resize-none"
-                        rows={3}
+                        className="resize-none pr-12 min-h-[80px] bg-muted/50 focus-visible:bg-background"
                         {...field}
-                    />
-                    </FormControl>
-                    <FormMessage />
+                      />
+                      <Button 
+                        type="submit" 
+                        size="icon"
+                        disabled={isAddingComment || !field.value.trim()} 
+                        className="absolute bottom-2 right-2 h-8 w-8 rounded-full"
+                      >
+                        {isAddingComment ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : (
+                          <Send className="h-4 w-4" />
+                        )}
+                      </Button>
+                    </div>
+                  </FormControl>
+                  <FormMessage />
                 </FormItem>
-                )}
+              )}
             />
-            <Button type="submit" disabled={isAddingComment} className="self-end">
-                {isAddingComment ? 'Enviando...' : 'Comentar'}
-            </Button>
-        </form>
-      </Form>
-    </div>
+          </form>
+        </Form>
+      </div>
+    </Card>
   );
 }

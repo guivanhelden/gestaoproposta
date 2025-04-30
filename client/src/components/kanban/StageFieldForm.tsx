@@ -12,8 +12,13 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { PlusCircle } from 'lucide-react';
-import { Trash2 } from 'lucide-react';
+import { PlusCircle, Trash2, HelpCircle, CheckCircle, Type, Calendar, Hash, AlignLeft, ListChecks, ToggleLeft, ListOrdered } from 'lucide-react';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { Card, CardContent } from '@/components/ui/card';
+import { Separator } from '@/components/ui/separator';
+import { Badge } from '@/components/ui/badge';
+import { cn } from '@/lib/utils';
+import { AnimatePresence, motion } from 'framer-motion';
 
 type StageField = Database["public"]["Tables"]["kanban_stage_fields"]["Row"];
 
@@ -103,6 +108,27 @@ interface StageFieldFormProps {
 
 export default function StageFieldForm({ stageId, initialData, onSave, onCancel, isSaving }: StageFieldFormProps) {
   
+  // Mapeamento de ícones e descrições para cada tipo de campo
+  const fieldTypeIcons = {
+    'text': <Type className="h-4 w-4" />,
+    'textarea': <AlignLeft className="h-4 w-4" />,
+    'number': <Hash className="h-4 w-4" />,
+    'date': <Calendar className="h-4 w-4" />,
+    'select': <ListOrdered className="h-4 w-4" />,
+    'boolean': <ToggleLeft className="h-4 w-4" />,
+    'checklist': <ListChecks className="h-4 w-4" />
+  };
+  
+  const fieldTypeDescriptions = {
+    'text': 'Campo de texto simples, ideal para informações curtas',
+    'textarea': 'Campo de texto multilinha para informações detalhadas',
+    'number': 'Campo para valores numéricos',
+    'date': 'Seletor de data',
+    'select': 'Lista suspensa de opções pré-definidas',
+    'boolean': 'Campo sim/não (verdadeiro/falso)',
+    'checklist': 'Lista de tarefas ou itens para marcar como concluídos'
+  };
+
   const getInitialOptions = (): Array<{label: string, value: string}> => {
     if (!initialData?.options) return [];
     try {
@@ -255,23 +281,62 @@ export default function StageFieldForm({ stageId, initialData, onSave, onCancel,
           name="field_type"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Tipo do Campo</FormLabel>
-              <Select onValueChange={field.onChange} defaultValue={field.value}>
-                <FormControl>
-                  <SelectTrigger id="field_type">
-                    <SelectValue placeholder="Selecione o tipo" />
-                  </SelectTrigger>
-                </FormControl>
-                <SelectContent>
-                  <SelectItem value="text">Texto Curto (Input)</SelectItem>
-                  <SelectItem value="textarea">Texto Longo (Textarea)</SelectItem>
-                  <SelectItem value="number">Número</SelectItem>
-                  <SelectItem value="date">Data</SelectItem>
-                  <SelectItem value="select">Seleção (Select)</SelectItem>
-                  <SelectItem value="boolean">Checkbox (Sim/Não)</SelectItem>
-                  <SelectItem value="checklist">Checklist</SelectItem> 
-                </SelectContent>
-              </Select>
+              <FormLabel className="text-base font-medium mb-2">Tipo do Campo</FormLabel>
+              <FormControl>
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+                  {SUPPORTED_FIELD_TYPES.map((type) => (
+                    <div
+                      key={type}
+                      className={cn(
+                        "relative overflow-hidden rounded-lg border-2 p-3 cursor-pointer transition-all duration-200",
+                        "hover:border-primary/70 hover:bg-primary/5",
+                        field.value === type
+                          ? "border-primary bg-primary/10 shadow-sm"
+                          : "border-border"
+                      )}
+                      onClick={() => field.onChange(type)}
+                    >
+                      <div className="flex flex-col items-center gap-2">
+                        <div 
+                          className={cn(
+                            "p-2 rounded-full", 
+                            field.value === type 
+                              ? "bg-primary text-primary-foreground" 
+                              : "bg-muted text-muted-foreground"
+                          )}
+                        >
+                          {fieldTypeIcons[type]}
+                        </div>
+                        <span className={cn(
+                          "font-medium text-center",
+                          field.value === type ? "text-primary" : "text-foreground"
+                        )}>
+                          {type === 'text' && "Texto Curto"}
+                          {type === 'textarea' && "Texto Longo"}
+                          {type === 'number' && "Número"}
+                          {type === 'date' && "Data"}
+                          {type === 'select' && "Seleção"}
+                          {type === 'boolean' && "Sim/Não"}
+                          {type === 'checklist' && "Checklist"}
+                        </span>
+                      </div>
+                      
+                      {field.value === type && (
+                        <div className="absolute top-1 right-1">
+                          <CheckCircle className="h-4 w-4 text-primary" />
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </FormControl>
+              
+              {field.value && (
+                <FormDescription className="text-xs mt-2">
+                  {fieldTypeDescriptions[field.value]}
+                </FormDescription>
+              )}
+              
               <FormMessage />
             </FormItem>
           )}

@@ -1,12 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { toast } from 'sonner';
-import { CalendarClock } from 'lucide-react';
+import { CalendarClock, X } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
 import { DateTimePicker } from '@/components/ui/date-time-picker';
 import { useKanbanCards } from '@/hooks/use-kanban-cards'; 
-import { Badge } from '@/components/ui/badge'; 
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 
 interface KanbanDueDateProps {
   cardId: string;
@@ -45,7 +46,8 @@ export function KanbanDueDate({ cardId, boardId, initialDueDate, initialStatus }
   // Estado local
   const [dueDateISO, setDueDateISO] = useState<string | null>(initialDueDate);
   const [status, setStatus] = useState<string | null>(initialStatus);
-  const [isUpdating, setIsUpdating] = useState<boolean>(false); 
+  const [isUpdating, setIsUpdating] = useState<boolean>(false);
+  const [isCalendarOpen, setIsCalendarOpen] = useState<boolean>(false);
 
   const { updateCard } = useKanbanCards(boardId); 
 
@@ -103,18 +105,41 @@ export function KanbanDueDate({ cardId, boardId, initialDueDate, initialStatus }
       </h3>
       
       <div className="space-y-4">
-        {dueDateISO && (
-          <div className="text-sm font-medium">
-            {formatDateTime(dueDateISO)}
+        <div className="text-sm font-medium flex items-center justify-between">
+          <span>{dueDateISO ? formatDateTime(dueDateISO) : 'Sem data definida'}</span>
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            onClick={() => setIsCalendarOpen(!isCalendarOpen)}
+            className="h-8 w-8 p-0 rounded-full hover:bg-blue-50 transition-colors"
+          >
+            <CalendarClock className="h-5 w-5 text-blue-500 hover:text-blue-600" />
+          </Button>
+        </div>
+        
+        {isCalendarOpen && (
+          <div className="relative">
+            <div className="flex justify-end mb-1">
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                onClick={() => setIsCalendarOpen(false)}
+                className="h-7 w-7 rounded-full absolute -top-2 -right-2 z-10 bg-white shadow-sm border"
+              >
+                <X className="h-4 w-4 text-gray-600" />
+              </Button>
+            </div>
+            <DateTimePicker 
+              value={dueDateISO} 
+              onChange={(newDate) => {
+                handleDueDateChange(newDate);
+                setIsCalendarOpen(false);
+              }}
+              placeholder="Selecione data e hora"
+              disabled={isUpdating} 
+            />
           </div>
         )}
-        
-        <DateTimePicker 
-          value={dueDateISO} 
-          onChange={handleDueDateChange}
-          placeholder="Selecione data e hora"
-          disabled={isUpdating} 
-        />
         
         {status && (
           <div className="mt-2">

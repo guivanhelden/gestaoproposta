@@ -8,15 +8,42 @@ import {
   FileSpreadsheet,
   Users,
   MessageSquare,
-  CalendarClock
+  CalendarClock,
+  AlertCircle,
+  MessageCircle,
+  Loader2
 } from "lucide-react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Dialog as MainDialog, DialogContent as MainDialogContent, DialogHeader as MainDialogHeader } from "@/components/ui/dialog";
+import { 
+  Card, 
+  CardContent, 
+  CardHeader, 
+  CardTitle, 
+  CardDescription,
+} from "@/components/ui/card";
+import { Separator } from "@/components/ui/separator";
+import { Dialog as MainDialog, DialogHeader as MainDialogHeader } from "@/components/ui/dialog";
+import { DialogContent as BaseDialogContent } from "@/components/ui/dialog";
+
+// DialogContent personalizado para resolver problemas de z-index e overflow com dropdowns
+const MainDialogContent = React.forwardRef<
+  React.ElementRef<typeof BaseDialogContent>,
+  React.ComponentPropsWithoutRef<typeof BaseDialogContent>
+>(({ className, ...props }, ref) => (
+  <BaseDialogContent
+    ref={ref}
+    className={cn("overflow-visible", className)}
+    style={{ zIndex: 50 }}
+    {...props}
+  />
+));
+MainDialogContent.displayName = "MainDialogContent";
 import { Form, FormControl, FormField, FormItem, FormMessage } from "@/components/ui/form";
 import { Textarea } from "@/components/ui/textarea";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Badge } from "@/components/ui/badge";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { formatDate, getStatusBadge } from "@/lib/utils/proposal-utils";
+import { cn } from "@/lib/utils";
 import { formatPartnerForUI, Partner as PartnerUI } from "@/lib/utils/partner-utils";
 import { KanbanComments } from "./KanbanComments";
 import KanbanDueDate from "./KanbanDueDate";
@@ -539,12 +566,28 @@ export default function CardModalSupabase({
                       isPartnerActionLoading={false}
                     />
 
-                    <Card className="border-none shadow-md bg-gradient-to-br from-white to-slate-50 overflow-hidden">
-                      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 bg-gradient-to-r from-slate-100 to-slate-200">
-                        <CardTitle className="text-lg font-semibold text-gray-700 flex items-center">
-                          <Users className="mr-2 h-5 w-5 text-primary/80" />
-                          Beneficiários
-                        </CardTitle>
+                    <Card className="relative overflow-hidden border-border/50 bg-card/50" 
+                          style={{ boxShadow: "0 4px 20px -5px rgba(0, 4, 255, 0.28), 0 2px 10px -5px rgba(45, 8, 255, 0.32)" }}>
+                      <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-blue-400/30 via-blue-500/60 to-blue-400/30"></div>
+                      
+                      <CardHeader className="p-4 pb-2">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <div className="flex items-center justify-center h-7 w-7 rounded-full bg-blue-500/10 text-blue-500">
+                              <Users className="h-4 w-4" />
+                            </div>
+                            <CardTitle className="text-base font-medium text-foreground/90">
+                              Beneficiários
+                            </CardTitle>
+                          </div>
+                          <Badge variant="outline" className="text-xs">
+                            Titulares e Dependentes
+                          </Badge>
+                        </div>
+                        <CardDescription className="text-xs mt-2">
+                          Cadastro de titulares e seus dependentes para o plano
+                        </CardDescription>
+                        <Separator className="mt-2" />
                       </CardHeader>
                       <CardContent className="p-6 space-y-4">
                         <BeneficiariesList 
@@ -564,13 +607,30 @@ export default function CardModalSupabase({
 
                     <GracePeriodForm control={form.control} operatorsList={operatorsList} />
 
-                    <Card className="border-none shadow-md bg-gradient-to-br from-white to-slate-50 overflow-hidden">
-                      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 bg-gradient-to-r from-slate-100 to-slate-200">
-                        <CardTitle className="text-lg font-semibold text-gray-700 flex items-center">
-                          <FileText className="mr-2 h-5 w-5 text-primary/80" />
-                          Observações Gerais
-                        </CardTitle>
+                    <Card className="relative overflow-hidden border-border/50 bg-card/50" 
+                          style={{ boxShadow: "0 4px 20px -5px rgba(34, 197, 94, 0.28), 0 2px 10px -5px rgba(74, 222, 128, 0.32)" }}>
+                      <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-green-400/30 via-green-500/60 to-green-400/30"></div>
+                      
+                      <CardHeader className="p-4 pb-2">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <div className="flex items-center justify-center h-7 w-7 rounded-full bg-green-500/10 text-green-500">
+                              <FileText className="h-4 w-4" />
+                            </div>
+                            <CardTitle className="text-base font-medium text-foreground/90">
+                              Observações Gerais
+                            </CardTitle>
+                          </div>
+                          <Badge variant="outline" className="text-xs">
+                            Anotações
+                          </Badge>
+                        </div>
+                        <CardDescription className="text-xs mt-2">
+                          Anotações gerais e observações sobre o processo da proposta
+                        </CardDescription>
+                        <Separator className="mt-2" />
                       </CardHeader>
+                      
                       <CardContent className="p-6 space-y-4">
                         <FormField
                           control={form.control}
@@ -583,7 +643,7 @@ export default function CardModalSupabase({
                                   {...field} 
                                   placeholder="Anotações gerais sobre a proposta, negociação, próximos passos..." 
                                   value={field.value || ''}
-                                  className="min-h-[120px] resize-none transition-all duration-200 focus-visible:ring-primary/80 focus-visible:border-primary/50" 
+                                  className="min-h-[120px] resize-none transition-all duration-200 focus-visible:ring-green-500/80 focus-visible:border-green-500/50" 
                                 />
                               </FormControl>
                               <FormMessage />
@@ -632,34 +692,77 @@ export default function CardModalSupabase({
               )}
               
               {/* Seção Dados da Etapa */}
-              <div className="p-4 bg-gradient-to-b from-muted/60 to-muted/30 rounded-md border shadow-sm h-fit">
-                <h3 className="font-semibold mb-4 flex items-center gap-2">
-                  <FileSpreadsheet className="h-4 w-4 text-primary" />
-                  {currentStageName} 
-                </h3>
-                <div className="space-y-3">
-                  {card.id && card.stage_id ? (
-                    <StageDataDisplay cardId={card.id} stageId={card.stage_id} />
-                  ) : (
-                    <div className="text-sm text-muted-foreground italic p-3 bg-muted rounded-md text-center">
-                      {isLoading ? <Skeleton className="h-5 w-3/4 mx-auto" /> : "Informações da etapa não disponíveis."}
+              <div className="relative overflow-hidden rounded-lg border border-border/50 shadow-sm bg-gradient-to-b from-card to-background">
+                <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-primary/30 via-primary/60 to-primary/30"></div>
+                
+                <div className="p-4 pt-5">
+                  <h3 className="font-medium text-base mb-4 flex items-center gap-2 text-foreground/90">
+                    <div className="flex items-center justify-center h-6 w-6 rounded-full bg-primary/10 text-primary">
+                      <FileSpreadsheet className="h-3.5 w-3.5" />
                     </div>
-                  )}
+                    <span>{currentStageName}</span>
+                    <Badge variant="outline" className="ml-auto text-xs font-normal">
+                      Etapa Atual
+                    </Badge>
+                  </h3>
+                  
+                  <div>
+                    {card.id && card.stage_id ? (
+                      <StageDataDisplay cardId={card.id} stageId={card.stage_id} />
+                    ) : (
+                      <div className="flex flex-col items-center justify-center p-6 bg-muted/30 rounded-md border border-border/50 text-center space-y-2">
+                        {isLoading ? (
+                          <>
+                            <Skeleton className="h-5 w-3/4 mx-auto mb-2" />
+                            <Skeleton className="h-4 w-2/4 mx-auto" />
+                          </>
+                        ) : (
+                          <>
+                            <AlertCircle className="h-10 w-10 text-muted-foreground mb-2 opacity-50" />
+                            <p className="text-sm text-muted-foreground">Informações da etapa não disponíveis.</p>
+                            <p className="text-xs text-muted-foreground/70">Verifique se o cartão está associado a uma etapa válida.</p>
+                          </>
+                        )}
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
 
-              {/* Seção de Comentários movida para cá */}
-              <div className="p-4 bg-gradient-to-b from-muted/60 to-muted/30 rounded-md border shadow-sm h-fit">
-                <h3 className="font-semibold mb-4 flex items-center gap-2">
-                  <MessageSquare className="h-4 w-4 text-primary" />
-                  Comentários
-                </h3>
+              {/* Seção de Comentários */}
+              <div className="h-fit">
                 {card.id && userId ? (
-                   <KanbanComments cardId={card.id} userId={userId} />
+                  <KanbanComments cardId={card.id} userId={userId} />
                 ) : (
-                  <div className="text-sm text-muted-foreground italic p-3 bg-muted rounded-md text-center">
-                    Carregando comentários...
-                  </div>
+                  <Card className="border border-border/50 bg-card/50 overflow-hidden">
+                    <div className="flex items-center justify-between p-3 border-b">
+                      <div className="flex items-center gap-2">
+                        <div className="flex items-center justify-center h-6 w-6 rounded-full bg-primary/10 text-primary">
+                          <MessageCircle className="h-3.5 w-3.5" />
+                        </div>
+                        <h3 className="font-medium text-sm">Comentários</h3>
+                      </div>
+                    </div>
+                    <div className="p-10 flex flex-col items-center justify-center">
+                      {isLoading ? (
+                        <div className="space-y-3 w-full max-w-sm">
+                          <div className="flex items-center gap-3">
+                            <Skeleton className="h-10 w-10 rounded-full" />
+                            <div className="space-y-1 flex-1">
+                              <Skeleton className="h-4 w-28" />
+                              <Skeleton className="h-3 w-14" />
+                            </div>
+                          </div>
+                          <Skeleton className="h-20 w-full" />
+                        </div>
+                      ) : (
+                        <>
+                          <Loader2 className="h-8 w-8 text-muted-foreground mb-3 animate-spin opacity-70" />
+                          <p className="text-muted-foreground text-sm">Carregando comentários...</p>
+                        </>
+                      )}
+                    </div>
+                  </Card>
                 )}
               </div>
             </div>

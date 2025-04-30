@@ -1,14 +1,22 @@
-import React, { useState, useEffect } from 'react';
-import { Control, Controller, FieldValues } from "react-hook-form";
-import { Building2, ChevronDown, Users, Check, X, Edit, Trash2, PlusCircle } from "lucide-react";
+import React, { useState } from 'react';
+import { Control, useWatch, Controller, FieldValues } from 'react-hook-form';
+import { z } from 'zod';
+import { Building2, ChevronDown, Users, Check, X, Edit, Trash2, PlusCircle, Search, MapPin, AtSign, Phone, User, Building, ChevronsUpDown } from "lucide-react";
 import { IMaskInput } from 'react-imask';
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { FormField, FormItem, FormLabel, FormControl, FormMessage } from "@/components/ui/form";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { FormField, FormItem, FormLabel, FormControl, FormMessage, FormDescription } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { Separator } from "@/components/ui/separator";
+import { motion, AnimatePresence } from "framer-motion";
+import { Skeleton } from "@/components/ui/skeleton";
+import { cn } from "@/lib/utils";
 import { Database } from "@/lib/database.types";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 
 // Manter a interface Partner aqui ou movê-la para um local compartilhado (ex: types.ts)
 export interface Partner {
@@ -59,22 +67,20 @@ const ufOptions = [
 ];
 
 interface CompanyDataFormProps {
-  control: Control<any>; // Receber o controle do formulário pai
-  onCnpjSearch?: (cnpj: string) => void; // Readicionado
-  isSearchingCnpj?: boolean; // Optional: Indicate if search is in progress
-  partners?: Partner[] | null | undefined; // Renomear de volta para partners ou manter initialPartners, mas agora é apenas para exibição
-  companyId?: string | null; // ID da empresa, pode ser nulo inicialmente
-  // Callbacks para o PAI controlar o Dialog/CRUD
+  control: Control<any>; 
+  onCnpjSearch?: (cnpj: string) => void; 
+  isSearchingCnpj?: boolean; 
+  partners?: Partner[] | null | undefined; 
+  companyId?: string | null; 
   onOpenAddPartner?: () => void;
   onOpenEditPartner?: (partner: Partner) => void;
   onDeletePartner?: (partnerId: string) => void;
-  isPartnerActionLoading?: boolean; // Flag de loading do pai
+  isPartnerActionLoading?: boolean; 
 };
 
-// Interfaces para as props dos componentes auxiliares
 interface SimpleFormFieldProps<TFieldValues extends FieldValues = FieldValues> {
   control: Control<TFieldValues>;
-  name: keyof TFieldValues | string; // Aceitar string para nomes dinâmicos se necessário
+  name: keyof TFieldValues | string; 
   label: string;
   placeholder: string;
   type?: string;
@@ -96,47 +102,97 @@ interface SelectFieldProps<TFieldValues extends FieldValues = FieldValues> {
   className?: string;
 }
 
-interface OptionType { // Tipo explícito para option
+interface OptionType { 
   value: string;
   label: string;
 }
 
-// Componente auxiliar para campo com máscara
 const SimpleFormField: React.FC<SimpleFormFieldProps> = ({ control, name, label, placeholder, type = "text", readOnly = false, className = "", mask = "" }) => {
+  const getIconForField = (fieldName: string) => {
+    const iconMap: Record<string, React.ReactNode> = {
+      cnpj: <Building2 className="h-4 w-4 text-muted-foreground" />,
+      razao_social: <Building className="h-4 w-4 text-muted-foreground" />,
+      nome_fantasia: <Building2 className="h-4 w-4 text-muted-foreground" />,
+      cep: <MapPin className="h-4 w-4 text-muted-foreground" />,
+      endereco: <MapPin className="h-4 w-4 text-muted-foreground" />,
+      numero: <MapPin className="h-4 w-4 text-muted-foreground" />,
+      complemento: <MapPin className="h-4 w-4 text-muted-foreground" />,
+      bairro: <MapPin className="h-4 w-4 text-muted-foreground" />,
+      cidade: <MapPin className="h-4 w-4 text-muted-foreground" />,
+      email: <AtSign className="h-4 w-4 text-muted-foreground" />,
+      telefone: <Phone className="h-4 w-4 text-muted-foreground" />,
+    };
+
+    return iconMap[String(fieldName)] || <Building2 className="h-4 w-4 text-muted-foreground" />;
+  };
+
   return (
     <div className={`space-y-2 ${className}`}>
-      <label className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">{label}</label>
+      <div className="flex items-center justify-between">
+        <label className="text-sm font-medium leading-none flex items-center gap-1.5">
+          <span className="flex items-center justify-center h-5 w-5 rounded-sm bg-muted text-muted-foreground">
+            {getIconForField(String(name))}
+          </span>
+          {label}
+        </label>
+        {readOnly && (
+          <Badge variant="outline" className="text-xs px-1.5 py-0.5 h-5">
+            Somente leitura
+          </Badge>
+        )}
+      </div>
       {mask ? (
         <div className="relative">
           <Controller
-            name={name as any} // Usar 'as any' aqui ou tipar TFieldValues corretamente
+            name={name as any} 
             control={control}
-            render={({ field }) => (
-              <IMaskInput
-                mask={mask}
-                unmask={false}
-                value={field.value || ''}
-                onAccept={(value) => field.onChange(value)}
-                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                placeholder={placeholder}
-                readOnly={readOnly}
-              />
+            render={({ field, fieldState }) => (
+              <>
+                <IMaskInput
+                  mask={mask}
+                  unmask={false}
+                  value={field.value || ''}
+                  onAccept={(value) => field.onChange(value)}
+                  className={cn(
+                    "flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 transition-colors duration-200",
+                    {
+                      "focus-visible:ring-primary/80 focus-visible:border-primary/50": true,
+                      "border-red-500/50 focus-visible:ring-red-500/30": fieldState.error
+                    }
+                  )}
+                  placeholder={placeholder}
+                  readOnly={readOnly}
+                />
+                {fieldState.error && (
+                  <p className="mt-1 text-xs text-red-500">{fieldState.error.message}</p>
+                )}
+              </>
             )}
           />
         </div>
       ) : (
         <Controller
-          name={name as any} // Usar 'as any' aqui ou tipar TFieldValues corretamente
+          name={name as any} 
           control={control}
-          render={({ field }) => (
-            <Input
-              type={type}
-              placeholder={placeholder}
-              {...field}
-              value={field.value || ''}
-              readOnly={readOnly}
-              className="transition-all duration-200 focus-visible:ring-primary/80 focus-visible:border-primary/50"
-            />
+          render={({ field, fieldState }) => (
+            <>
+              <Input
+                type={type}
+                placeholder={placeholder}
+                {...field}
+                value={field.value || ''}
+                readOnly={readOnly}
+                className={cn(
+                  "transition-all duration-200 focus-visible:ring-primary/80 focus-visible:border-primary/50",
+                  {
+                    "border-red-500/50 focus-visible:ring-red-500/30": fieldState.error
+                  }
+                )}
+              />
+              {fieldState.error && (
+                <p className="mt-1 text-xs text-red-500">{fieldState.error.message}</p>
+              )}
+            </>
           )}
         />
       )}
@@ -144,11 +200,10 @@ const SimpleFormField: React.FC<SimpleFormFieldProps> = ({ control, name, label,
   );
 };
 
-// Componente auxiliar para Switch
 const SwitchField: React.FC<SwitchFieldProps> = ({ control, name }) => {
   return (
     <Controller
-      name={name as any} // Usar 'as any' aqui ou tipar TFieldValues corretamente
+      name={name as any} 
       control={control}
       render={({ field }) => (
         <Switch
@@ -160,294 +215,533 @@ const SwitchField: React.FC<SwitchFieldProps> = ({ control, name }) => {
   );
 };
 
-// Componente auxiliar para Select
 const SelectField: React.FC<SelectFieldProps> = ({ control, name, label, options, className = "" }) => {
+  const getIconForSelectField = (fieldName: string) => {
+    const iconMap: Record<string, React.ReactNode> = {
+      uf: <MapPin className="h-4 w-4 text-muted-foreground" />,
+    };
+
+    return iconMap[String(fieldName)] || <ChevronDown className="h-4 w-4 text-muted-foreground" />;
+  };
+
   return (
     <div className={`space-y-2 ${className}`}>
-      <label className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">{label}</label>
-      <Controller
-        name={name as any} // Usar 'as any' aqui ou tipar TFieldValues corretamente
-        control={control}
-        render={({ field }) => (
-          <Select onValueChange={field.onChange} value={field.value || ""}>
-            <SelectTrigger>
-              <SelectValue placeholder="Selecione" />
-            </SelectTrigger>
-            <SelectContent>
-              {options.map((option: OptionType) => ( // <-- Tipo explícito para option
-                <SelectItem key={option.value} value={option.value}>
-                  {option.label} ({option.value})
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        )}
-      />
+      <div className="flex items-center justify-between">
+        <label className="text-sm font-medium leading-none flex items-center gap-1.5">
+          <span className="flex items-center justify-center h-5 w-5 rounded-sm bg-muted text-muted-foreground">
+            {getIconForSelectField(String(name))}
+          </span>
+          {label}
+        </label>
+      </div>
+      <div className="relative">
+        <Controller
+          name={name as any} 
+          control={control}
+          render={({ field, fieldState }) => (
+            <>
+              <Select 
+                onValueChange={field.onChange} 
+                defaultValue={field.value} 
+                value={field.value || ''}
+              >
+                <SelectTrigger className={cn(
+                  "w-full transition-all duration-200 focus-visible:ring-primary/80 focus-visible:border-primary/50",
+                  {
+                    "border-red-500/50 focus-visible:ring-red-500/30": fieldState.error
+                  }
+                )}>
+                  <SelectValue placeholder="Selecionar..." />
+                </SelectTrigger>
+                <SelectContent>
+                  <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ duration: 0.15 }}
+                  >
+                    {options.map((option) => (
+                      <SelectItem key={option.value} value={option.value}>
+                        {option.label}
+                      </SelectItem>
+                    ))}
+                  </motion.div>
+                </SelectContent>
+              </Select>
+              {fieldState.error && (
+                <p className="mt-1 text-xs text-red-500">{fieldState.error.message}</p>
+              )}
+            </>
+          )}
+        />
+      </div>
     </div>
   );
 };
 
 const CompanyDataForm: React.FC<CompanyDataFormProps> = ({
-  control,
+  control, 
+  partners,
   onCnpjSearch,
   isSearchingCnpj,
-  partners,
-  companyId,
+  companyId, 
   onOpenAddPartner,
   onOpenEditPartner,
   onDeletePartner,
   isPartnerActionLoading
 }) => {
-  const [isExpanded, setIsExpanded] = useState(false);
+  // Estado para controlar o Collapsible
+  const [isOpen, setIsOpen] = useState(false); // Começa fechado por padrão
+
+  // Observa os valores de CNPJ e Razão Social do formulário
+  const cnpjValue = useWatch({ control, name: 'cnpj' });
+  const razaoSocialValue = useWatch({ control, name: 'razao_social' });
 
   return (
-    <Card className="border-none shadow-md bg-gradient-to-br from-white to-slate-50 overflow-hidden">
-      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 bg-gradient-to-r from-slate-100 to-slate-200">
-        <CardTitle className="text-lg font-semibold text-gray-700 flex items-center">
-          <Building2 className="mr-2 h-5 w-5 text-primary/80" />
-          Dados da Empresa
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-4 p-6">
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <SimpleFormField 
-            control={control}
-            name="cnpj"
-            label="CNPJ"
-            placeholder="00.000.000/0000-00"
-            mask="00.000.000/0000-00"
-          />
-          <SimpleFormField 
-            control={control}
-            name="razao_social"
-            label="Razão Social"
-            placeholder="Razão Social da Empresa"
-          />
+    <Card className="relative overflow-hidden border-border/50 bg-card/50" style={{ boxShadow: "0 4px 20px -5px rgba(0, 4, 255, 0.28), 0 2px 10px -5px rgba(45, 8, 255, 0.32)" }}>
+      <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-blue-400/30 via-blue-500/60 to-blue-400/30"></div>
+      
+      <CardHeader className="p-4 pb-2">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <div className="flex items-center justify-center h-7 w-7 rounded-full bg-blue-500/10 text-blue-500">
+              <Building2 className="h-4 w-4" />
+            </div>
+            <CardTitle className="text-base font-medium text-foreground/90">
+              Dados da Empresa
+            </CardTitle>
+          </div>
+          <Badge variant="outline" className="text-xs">
+            Cadastro CNPJ
+          </Badge>
         </div>
+        <CardDescription className="text-xs mt-2">
+          Informações principais da empresa contratante
+        </CardDescription>
+        <Separator className="mt-2" />
+      </CardHeader>
 
-        {/* Acordeão DIY usando useState */}
-        <div className="w-full border-t mt-4 pt-4">
-          <button 
-            type="button"
-            onClick={() => setIsExpanded(!isExpanded)} 
-            className="flex justify-between w-full text-base font-medium text-gray-600 py-2 hover:text-gray-800 transition-colors"
-          >
-            Mais Detalhes da Empresa
-            <ChevronDown className={`w-5 h-5 transition-transform duration-200 ${isExpanded ? 'rotate-180' : ''}`} />
-          </button>
-          
-          {isExpanded && (
-            <div className="pt-4 space-y-6 animate-in fade-in duration-200">
-              {/* Dados Adicionais da Empresa */}
-              <div className="space-y-4">
-                <h4 className="text-md font-semibold text-gray-600">Dados Adicionais</h4>
-                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                   <SimpleFormField 
-                     control={control}
-                     name="nome_fantasia"
-                     label="Nome Fantasia"
-                     placeholder="Nome Fantasia da Empresa"
-                   />
-                   
-                   <SimpleFormField 
-                     control={control}
-                     name="data_abertura"
-                     label="Data de Abertura"
-                     type="date"
-                     placeholder="DD/MM/AAAA" // <-- Adicionado placeholder
-                   />
-                   
-                   <SimpleFormField 
-                     control={control}
-                     name="natureza_juridica"
-                     label="Natureza Jurídica"
-                     placeholder="Ex: LTDA, SA"
-                     readOnly
-                   />
-                   
-                   <SimpleFormField 
-                     control={control}
-                     name="situacao_cadastral"
-                     label="Situação Cadastral"
-                     placeholder="Ex: Ativa"
-                     readOnly
-                   />
-                   
-                   <SimpleFormField 
-                     control={control}
-                     name="cnae"
-                     label="CNAE Principal"
-                     placeholder="Código e Descrição"
-                     readOnly
-                     className="sm:col-span-2"
-                   />
-                   
-                   <div className="flex items-center justify-between rounded-lg border border-muted bg-muted/20 p-3 shadow-sm hover:bg-muted/30 transition-colors sm:col-span-2">
-                     <label className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">Empresa é MEI?</label>
-                     <SwitchField control={control} name="is_mei" />
-                   </div>
-                 </div>
+      <Collapsible
+        open={isOpen}
+        onOpenChange={setIsOpen}
+        className="w-full border-t border-border/30"
+      >
+        {/* Trigger agora renderiza seu próprio botão, aplicamos estilos nele */}
+        <CollapsibleTrigger className="flex w-full items-center justify-between px-4 py-2 text-sm font-medium hover:underline [&[data-state=open]>svg]:rotate-180">
+           <div className="flex flex-1 items-center justify-between mr-2"> {/* Div interna para layout */} 
+             <span>Detalhes da Empresa e Sócios</span>
+             {/* Informação extra visível apenas quando fechado (!isOpen) */} 
+             {!isOpen && (
+               <span className="text-xs text-muted-foreground truncate ml-4 font-normal">
+                 {cnpjValue || razaoSocialValue ? (
+                   <>
+                     {cnpjValue && <span className="font-mono mr-1">{cnpjValue}</span>}
+                     {cnpjValue && razaoSocialValue && <span className="mx-1">|</span>}
+                     {razaoSocialValue && <span className="truncate max-w-[200px]">{razaoSocialValue}</span>}
+                   </>
+                 ) : (
+                   <span className="italic">CNPJ/Razão Social não preenchidos</span>
+                 )}
+               </span>
+             )}
+           </div>
+            {/* Ícone precisa ser explícito aqui, usando ChevronsUpDown */}
+            <ChevronsUpDown className="h-4 w-4 shrink-0 text-muted-foreground transition-transform duration-200" />
+        </CollapsibleTrigger>
+
+        <CollapsibleContent> {/* Conteúdo que será mostrado/ocultado */} 
+          {/* CardContent contém o formulário e a seção de sócios */}
+          <CardContent className="p-4 pt-0"> {/* Ajusta padding superior */} 
+            <AnimatePresence initial={false}>
+              <motion.div 
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ duration: 0.4 }}
+              >
+                <div className="space-y-4 mb-6">
+                  <div className="flex items-center gap-2 mb-2">
+                    <div className="h-5 w-1 bg-blue-500/70 rounded-full"></div>
+                    <h3 className="text-sm font-medium text-foreground/80">Identificação</h3>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="relative">
+                      <SimpleFormField 
+                        control={control}
+                        name="cnpj"
+                        label="CNPJ"
+                        placeholder="00.000.000/0000-00"
+                        mask="00.000.000/0000-00"
+                      />
+                      
+                      {onCnpjSearch && (
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button 
+                                type="button" 
+                                size="icon" 
+                                variant="outline"
+                                className="absolute right-1 top-7 h-8 w-8"
+                                onClick={() => {
+                                  const cnpjValue = (document.querySelector('input[name="cnpj"]') as HTMLInputElement)?.value;
+                                  if (cnpjValue && cnpjValue.length >= 14) {
+                                    onCnpjSearch(cnpjValue);
+                                  }
+                                }}
+                                disabled={isSearchingCnpj}
+                              >
+                                {isSearchingCnpj ? (
+                                  <motion.div
+                                    animate={{ rotate: 360 }}
+                                    transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+                                  >
+                                    <Search className="h-4 w-4 text-muted-foreground" />
+                                  </motion.div>
+                                ) : (
+                                  <Search className="h-4 w-4 text-muted-foreground" />
+                                )}
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent side="right">
+                              <p className="text-xs">Buscar dados por CNPJ</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                      )}
+                    </div>
+                    <SimpleFormField 
+                      control={control}
+                      name="razao_social"
+                      label="Razão Social"
+                      placeholder="Razão Social da Empresa"
+                    />
+                  </div>
+
+                  <SimpleFormField 
+                    control={control}
+                    name="nome_fantasia"
+                    label="Nome Fantasia"
+                    placeholder="Nome Fantasia da Empresa"
+                  />
+                </div>
+
+                <div className="mb-6">
+                  <div className="flex items-center gap-2 mb-3">
+                    <div className="h-5 w-1 bg-blue-500/70 rounded-full"></div>
+                    <h3 className="text-sm font-medium text-foreground/80">Dados Adicionais</h3>
+                  </div>
+                  
+                  <div className="bg-muted/10 p-3 rounded-lg border border-border/50">
+                    <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
+                      <SimpleFormField 
+                        control={control}
+                        name="data_abertura"
+                        label="Data de Abertura"
+                        type="date"
+                        placeholder="DD/MM/AAAA"
+                      />
+                      <SimpleFormField 
+                        control={control}
+                        name="natureza_juridica"
+                        label="Natureza Jurídica"
+                        placeholder="Ex: LTDA, SA"
+                      />
+                      <SimpleFormField 
+                        control={control}
+                        name="cnae"
+                        label="CNAE Principal"
+                        placeholder="Código e Descrição"
+                      />
+                      
+                      <div className="h-full rounded-lg border border-muted p-3 bg-background/80 shadow-sm transition-colors">
+                        <div>
+                          <div className="flex items-center justify-between mb-3">
+                            <div className="flex items-center gap-2">
+                              <div className="flex items-center justify-center h-5 w-5 rounded-full bg-green-500/10 text-green-500">
+                                <Check className="h-3 w-3" />
+                              </div>
+                              <span className="text-sm font-medium">Situação Cadastral</span>
+                            </div>
+                            <Badge variant="outline" className="text-xs px-1 py-0.5 font-normal bg-green-50 text-green-600 border-green-200">
+                              Ativa
+                            </Badge>
+                          </div>
+                          
+                          <Separator className="my-2" />
+                          
+                          <div className="flex items-center justify-between mt-3">
+                            <div className="flex items-center gap-2">
+                              <div className="flex items-center justify-center h-5 w-5 rounded-full bg-blue-500/10 text-blue-500">
+                                <Building className="h-3 w-3" />
+                              </div>
+                              <span className="text-sm font-medium">Empresa é MEI?</span>
+                            </div>
+                            <SwitchField control={control} name="is_mei" />
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                
+                <div className="mb-6">
+                  <div className="flex items-center gap-2 mb-3">
+                    <div className="h-5 w-1 bg-blue-500/70 rounded-full"></div>
+                    <h3 className="text-sm font-medium text-foreground/80">Endereço</h3>
+                  </div>
+                  
+                  <div className="bg-muted/10 p-3 rounded-lg border border-border/50">
+                    <div className="flex mb-4">
+                      <div className="w-1/3 mr-2">
+                        <SimpleFormField 
+                          control={control}
+                          name="cep"
+                          label="CEP"
+                          placeholder="00000-000"
+                          mask="00000-000"
+                        />
+                      </div>
+                      <div className="flex items-end mb-2 ml-2">
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button 
+                                type="button"
+                                size="sm"
+                                variant="outline"
+                                className="h-10 transition-all hover:bg-blue-50"
+                                onClick={() => {
+                                  console.log("Buscar CEP");
+                                }}
+                              >
+                                <MapPin className="mr-1.5 h-3.5 w-3.5 text-blue-500" />
+                                <span className="text-xs">Buscar Endereço</span>
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent side="right">
+                              <p className="text-xs">Buscar endereço pelo CEP</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 mb-4">
+                      <div className="lg:col-span-2">
+                        <SimpleFormField 
+                          control={control}
+                          name="endereco"
+                          label="Logradouro"
+                          placeholder="Rua, Avenida, etc."
+                        />
+                      </div>
+                      <div className="lg:col-span-1">
+                        <SimpleFormField 
+                          control={control}
+                          name="numero"
+                          label="Número"
+                          placeholder="123"
+                        />
+                      </div>
+                      <div className="lg:col-span-1">
+                        <SimpleFormField 
+                          control={control}
+                          name="complemento"
+                          label="Complemento"
+                          placeholder="Sala, Andar, etc."
+                        />
+                      </div>
+                    </div>
+                    
+                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+                      <SimpleFormField 
+                        control={control}
+                        name="bairro"
+                        label="Bairro"
+                        placeholder="Bairro"
+                      />
+                      <SimpleFormField 
+                        control={control}
+                        name="cidade"
+                        label="Cidade"
+                        placeholder="Cidade"
+                      />
+                      <SelectField
+                        control={control}
+                        name="uf"
+                        label="UF"
+                        options={ufOptions}
+                      />
+                    </div>
+                  </div>
+                </div>
+              </motion.div>
+            </AnimatePresence>   
+            <div className="mt-6">
+              <div className="flex items-center gap-2 mb-3">
+                <div className="h-5 w-1 bg-blue-500/70 rounded-full"></div>
+                <h3 className="text-sm font-medium text-foreground/80">Sócios da Empresa</h3>
               </div>
               
-              {/* Endereço */}
-               <div className="space-y-4 border-t pt-4">
-                 <h4 className="text-md font-semibold text-gray-600">Endereço</h4>
-                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                   <SimpleFormField 
-                     control={control}
-                     name="cep"
-                     label="CEP"
-                     placeholder="00000-000"
-                     mask="00000-000"
-                     className="sm:col-span-1"
-                   />
-                   
-                   <SimpleFormField 
-                     control={control}
-                     name="tipo_logradouro"
-                     label="Tipo"
-                     placeholder="Rua, Av."
-                     className="sm:col-span-1"
-                   />
-                   
-                   <SimpleFormField 
-                     control={control}
-                     name="logradouro"
-                     label="Logradouro"
-                     placeholder="Nome da rua, avenida..."
-                     className="sm:col-span-1"
-                   />
-                   
-                   <SimpleFormField 
-                     control={control}
-                     name="numero"
-                     label="Número"
-                     placeholder="Nº"
-                     className="sm:col-span-1"
-                   />
-                   
-                   <SimpleFormField 
-                     control={control}
-                     name="complemento"
-                     label="Complemento"
-                     placeholder="Apto, Bloco, Sala..."
-                     className="sm:col-span-2"
-                   />
-                   
-                   <SimpleFormField 
-                     control={control}
-                     name="bairro"
-                     label="Bairro"
-                     placeholder="Bairro"
-                     className="sm:col-span-1"
-                   />
-                   
-                   <SimpleFormField 
-                     control={control}
-                     name="cidade"
-                     label="Cidade"
-                     placeholder="Cidade"
-                     className="sm:col-span-1"
-                   />
-                   
-                   <SelectField
-                     control={control}
-                     name="uf"
-                     label="UF"
-                     options={ufOptions}
-                     className="sm:col-span-1"
-                   />
-                 </div>
-               </div>
-              
-              {/* Seção de Sócios - Apenas Lista e Botões que chamam props */}
-              <div className="space-y-4 border-t pt-4">
-                <div className="flex justify-between items-center">
-                  <h4 className="text-md font-semibold text-gray-600 flex items-center">
-                    <Users className="mr-2 h-4 w-4 text-primary/70" />
-                    Sócios
-                  </h4>
+              <div className="mb-4 bg-muted/20 rounded-lg p-4 border border-border/50" style={{ boxShadow: "0 8px 20px -5px rgba(0, 0, 0, 0.1), 0 2px 10px -5px rgba(0, 0, 0, 0.05)" }}>
+                <div className="flex justify-between items-center mb-3">
+                  <div className="flex items-center">
+                    <div className="flex items-center justify-center h-6 w-6 rounded-full bg-blue-500/10 text-blue-500 mr-2">
+                      <Users className="h-3.5 w-3.5" />
+                    </div>
+                    <h4 className="text-sm font-medium">
+                      {partners?.length || 0} {partners?.length === 1 ? 'Sócio Cadastrado' : 'Sócios Cadastrados'}
+                    </h4>
+                  </div>
+                  
                   {companyId && (
-                    <Button 
-                      type="button"
-                      onClick={onOpenAddPartner}
-                      size="sm" 
-                      variant="outline"
-                      disabled={isPartnerActionLoading}
-                    >
-                      <PlusCircle className="mr-2 h-4 w-4" />
-                      Adicionar Sócio
-                    </Button>
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button 
+                            type="button"
+                            onClick={onOpenAddPartner}
+                            size="sm" 
+                            variant="outline"
+                            className="h-8 transition-all hover:bg-blue-50"
+                            disabled={isPartnerActionLoading}
+                          >
+                            <PlusCircle className="mr-1.5 h-3.5 w-3.5 text-blue-500" />
+                            <span className="text-xs">Adicionar</span>
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent side="top">
+                          <p className="text-xs">Adicionar novo sócio à empresa</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
                   )}
                 </div>
 
-                {/* Renderiza a lista de sócios vinda da prop `partners` */}
-                {(!partners || partners.length === 0) ? (
-                  <div className="p-4 bg-muted rounded-md text-center border border-dashed">
-                    <p className="text-sm text-muted-foreground">
-                      {companyId ? "Nenhum sócio cadastrado." : "Salve os dados da empresa para adicionar sócios."} 
-                    </p>
-                  </div>
-                ) : (
-                  <div className="overflow-x-auto">
-                    <table className="w-full border-collapse">
-                      <thead>
-                        <tr className="bg-muted/50">
-                          <th className="px-4 py-2 text-left">Nome</th>
-                          <th className="px-4 py-2 text-left">Email</th>
-                          <th className="px-4 py-2 text-left">Telefone</th>
-                          <th className="px-4 py-2 text-center">Responsável</th>
-                          <th className="px-4 py-2 text-right">Ações</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {partners.map((partner) => (
-                          <tr key={partner.id} className="border-b border-muted">
-                            <td className="px-4 py-2 font-medium">{partner.nome}</td>
-                            <td className="px-4 py-2">{partner.email || "-"}</td>
-                            <td className="px-4 py-2">{partner.telefone || "-"}</td>
-                            <td className="px-4 py-2 text-center">
-                              {partner.is_responsavel ? (
-                                <Check className="h-4 w-4 text-green-600 inline-block" />
-                              ) : (
-                                <X className="h-4 w-4 text-muted-foreground inline-block" />
-                              )}
-                            </td>
-                            <td className="px-4 py-2 text-right space-x-2">
-                              <Button
-                                type="button"
-                                variant="ghost"
-                                size="icon"
-                                className="h-7 w-7"
-                                onClick={() => onOpenEditPartner?.(partner)}
-                                disabled={isPartnerActionLoading}
-                              >
-                                <Edit className="h-4 w-4 text-blue-500" />
-                                <span className="sr-only">Editar</span>
-                              </Button>
-                              <Button
-                                type="button"
-                                variant="ghost"
-                                size="icon"
-                                className="h-7 w-7"
-                                onClick={() => onDeletePartner?.(partner.id)}
-                                disabled={isPartnerActionLoading}
-                              >
-                                <Trash2 className="h-4 w-4 text-red-500" />
-                                <span className="sr-only">Excluir</span>
-                              </Button>
-                            </td>
+                <AnimatePresence initial={false}>
+                  {(!partners || partners.length === 0) ? (
+                    <motion.div
+                      initial={{ opacity: 0, y: 5 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -5 }}
+                      className="p-6 rounded-md text-center border border-dashed bg-background/50 flex flex-col items-center justify-center"
+                    >
+                      <div className="h-10 w-10 rounded-full bg-muted/50 flex items-center justify-center mb-2">
+                        <Users className="h-5 w-5 text-muted-foreground/70" />
+                      </div>
+                      <p className="text-sm text-muted-foreground">
+                        {companyId ? "Nenhum sócio cadastrado ainda." : "Salve os dados da empresa para adicionar sócios."} 
+                      </p>
+                      {companyId && (
+                        <Button 
+                          type="button"
+                          onClick={onOpenAddPartner}
+                          size="sm" 
+                          variant="link"
+                          className="mt-2 text-xs h-8 text-blue-500 hover:text-blue-600"
+                          disabled={isPartnerActionLoading}
+                        >
+                          <PlusCircle className="mr-1 h-3 w-3" />
+                          Adicionar o primeiro sócio
+                        </Button>
+                      )}
+                    </motion.div>
+                  ) : (
+                    <motion.div 
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      className="overflow-hidden rounded-md border border-border/50 bg-background"
+                    >
+                      <table className="w-full border-collapse">
+                        <thead>
+                          <tr className="bg-muted/30 border-b border-border/50">
+                            <th className="px-4 py-2 text-left text-xs font-medium text-muted-foreground">Nome</th>
+                            <th className="px-4 py-2 text-left text-xs font-medium text-muted-foreground">Email</th>
+                            <th className="px-4 py-2 text-left text-xs font-medium text-muted-foreground">Telefone</th>
+                            <th className="px-4 py-2 text-center text-xs font-medium text-muted-foreground">Responsável</th>
+                            <th className="px-4 py-2 text-right text-xs font-medium text-muted-foreground">Ações</th>
                           </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                )}
+                        </thead>
+                        <tbody>
+                          {partners.map((partner, index) => (
+                            <motion.tr 
+                              key={partner.id} 
+                              className="border-b border-border/50 hover:bg-muted/10 transition-colors"
+                              initial={{ opacity: 0, y: 10 }}
+                              animate={{ opacity: 1, y: 0 }}
+                              transition={{ delay: index * 0.05 }}
+                            >
+                              <td className="px-4 py-2.5 font-medium text-sm">{partner.nome}</td>
+                              <td className="px-4 py-2.5 text-sm">{partner.email || "-"}</td>
+                              <td className="px-4 py-2.5 text-sm">{partner.telefone || "-"}</td>
+                              <td className="px-4 py-2.5 text-center">
+                                {partner.is_responsavel ? (
+                                  <Badge variant="outline" className="text-xs px-1 py-0.5 font-normal bg-green-50 text-green-600 border-green-200">
+                                    <Check className="h-3 w-3 mr-1" />
+                                    Sim
+                                  </Badge>
+                                ) : (
+                                  <Badge variant="outline" className="text-xs px-1 py-0.5 font-normal text-muted-foreground">
+                                    <X className="h-3 w-3 mr-1" />
+                                    Não
+                                  </Badge>
+                                )}
+                              </td>
+                              <td className="px-4 py-2.5 text-right">
+                                <div className="flex items-center justify-end space-x-1">
+                                  <TooltipProvider>
+                                    <Tooltip>
+                                      <TooltipTrigger asChild>
+                                        <Button
+                                          type="button"
+                                          variant="ghost"
+                                          size="icon"
+                                          className="h-7 w-7 hover:bg-blue-50 hover:text-blue-600"
+                                          onClick={() => onOpenEditPartner?.(partner)}
+                                          disabled={isPartnerActionLoading}
+                                        >
+                                          <Edit className="h-3.5 w-3.5 text-blue-500" />
+                                        </Button>
+                                      </TooltipTrigger>
+                                      <TooltipContent side="left">
+                                        <p className="text-xs">Editar sócio</p>
+                                      </TooltipContent>
+                                    </Tooltip>
+                                  </TooltipProvider>
+                                  
+                                  <TooltipProvider>
+                                    <Tooltip>
+                                      <TooltipTrigger asChild>
+                                        <Button
+                                          type="button"
+                                          variant="ghost"
+                                          size="icon"
+                                          className="h-7 w-7 hover:bg-red-50 hover:text-red-600"
+                                          onClick={() => onDeletePartner?.(partner.id)}
+                                          disabled={isPartnerActionLoading}
+                                        >
+                                          <Trash2 className="h-3.5 w-3.5 text-red-500" />
+                                        </Button>
+                                      </TooltipTrigger>
+                                      <TooltipContent side="left">
+                                        <p className="text-xs">Excluir sócio</p>
+                                      </TooltipContent>
+                                    </Tooltip>
+                                  </TooltipProvider>
+                                </div>
+                              </td>
+                            </motion.tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
               </div>
             </div>
-          )}
-        </div>
-      </CardContent>
+          </CardContent>
+        </CollapsibleContent>
+      </Collapsible>
     </Card>
   );
 };
