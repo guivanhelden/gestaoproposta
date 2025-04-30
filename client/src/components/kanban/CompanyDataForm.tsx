@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Control, useWatch, Controller, FieldValues } from 'react-hook-form';
 import { z } from 'zod';
-import { Building2, ChevronDown, Users, Check, X, Edit, Trash2, PlusCircle, Search, MapPin, AtSign, Phone, User, Building, ChevronsUpDown } from "lucide-react";
+import { Building2, ChevronDown, Users, Check, X, Edit, Trash2, PlusCircle, Search, MapPin, AtSign, Phone, User, Building, ChevronsUpDown, UserCheck } from "lucide-react";
 import { IMaskInput } from 'react-imask';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { FormField, FormItem, FormLabel, FormControl, FormMessage, FormDescription } from "@/components/ui/form";
@@ -17,6 +17,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 import { Database } from "@/lib/database.types";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { Partner as PartnerUI } from "@/lib/utils/partner-utils";
 
 // Manter a interface Partner aqui ou movê-la para um local compartilhado (ex: types.ts)
 export interface Partner {
@@ -70,12 +71,13 @@ interface CompanyDataFormProps {
   control: Control<any>; 
   onCnpjSearch?: (cnpj: string) => void; 
   isSearchingCnpj?: boolean; 
-  partners?: Partner[] | null | undefined; 
+  partners?: PartnerUI[] | null | undefined; 
   companyId?: string | null; 
   onOpenAddPartner?: () => void;
-  onOpenEditPartner?: (partner: Partner) => void;
+  onOpenEditPartner?: (partner: PartnerUI) => void;
   onDeletePartner?: (partnerId: string) => void;
   isPartnerActionLoading?: boolean; 
+  responsiblePartner?: PartnerUI | null;
 };
 
 interface SimpleFormFieldProps<TFieldValues extends FieldValues = FieldValues> {
@@ -287,7 +289,8 @@ const CompanyDataForm: React.FC<CompanyDataFormProps> = ({
   onOpenAddPartner,
   onOpenEditPartner,
   onDeletePartner,
-  isPartnerActionLoading
+  isPartnerActionLoading,
+  responsiblePartner
 }) => {
   // Estado para controlar o Collapsible
   const [isOpen, setIsOpen] = useState(false); // Começa fechado por padrão
@@ -325,23 +328,86 @@ const CompanyDataForm: React.FC<CompanyDataFormProps> = ({
         onOpenChange={setIsOpen}
         className="w-full border-t border-border/30"
       >
-        {/* Trigger agora renderiza seu próprio botão, aplicamos estilos nele */}
         <CollapsibleTrigger className="flex w-full items-center justify-between px-4 py-2 text-sm font-medium hover:underline [&[data-state=open]>svg]:rotate-180">
            <div className="flex flex-1 items-center justify-between mr-2"> {/* Div interna para layout */} 
-             <span>Detalhes da Empresa e Sócios</span>
+             <div className="flex items-center">
+               <span>Detalhes da Empresa e Sócios</span>
+               {!isOpen && !responsiblePartner && (
+                 <Badge variant="outline" className="ml-2 px-1.5 py-0.5 bg-red-50/80 border-red-200/70 text-red-600 hover:bg-red-100/40 transition-colors cursor-pointer" onClick={() => setIsOpen(true)}>
+                   <X className="h-3 w-3 mr-1 text-red-500" />
+                   <span className="text-xs">Definir Responsável</span>
+                 </Badge>
+               )}
+             </div>
+             
              {/* Informação extra visível apenas quando fechado (!isOpen) */} 
              {!isOpen && (
-               <span className="text-xs text-muted-foreground truncate ml-4 font-normal">
-                 {cnpjValue || razaoSocialValue ? (
-                   <>
-                     {cnpjValue && <span className="font-mono mr-1">{cnpjValue}</span>}
-                     {cnpjValue && razaoSocialValue && <span className="mx-1">|</span>}
-                     {razaoSocialValue && <span className="truncate max-w-[200px]">{razaoSocialValue}</span>}
-                   </>
-                 ) : (
-                   <span className="italic">CNPJ/Razão Social não preenchidos</span>
+               <div className="flex flex-wrap items-center gap-2 ml-4 max-w-[65%] overflow-hidden">
+                 {/* CNPJ e Razão Social */} 
+                 {(cnpjValue || razaoSocialValue) && (
+                   <div className="flex items-center gap-1.5">
+                     {cnpjValue && (
+                       <TooltipProvider>
+                         <Tooltip>
+                           <TooltipTrigger asChild>
+                             <Badge variant="outline" className="px-2 py-1 bg-blue-50/70 border-blue-200/70 text-blue-700 hover:bg-blue-100/70 transition-colors">
+                               <Building2 className="h-3 w-3 mr-1.5 text-blue-500" />
+                               <span className="font-mono text-xs truncate max-w-[120px]">{cnpjValue}</span>
+                             </Badge>
+                           </TooltipTrigger>
+                           <TooltipContent side="top"><p className="text-xs">{cnpjValue}</p></TooltipContent>
+                         </Tooltip>
+                       </TooltipProvider>
+                     )}
+                     {razaoSocialValue && (
+                       <TooltipProvider>
+                         <Tooltip>
+                           <TooltipTrigger asChild>
+                             <Badge variant="outline" className="px-2 py-1 bg-green-50/70 border-green-200/70 text-green-700 hover:bg-green-100/70 transition-colors">
+                               <Building className="h-3 w-3 mr-1.5 text-green-500" />
+                               <span className="text-xs truncate max-w-[150px]">{razaoSocialValue}</span>
+                             </Badge>
+                           </TooltipTrigger>
+                           <TooltipContent side="top"><p className="text-xs">{razaoSocialValue}</p></TooltipContent>
+                         </Tooltip>
+                       </TooltipProvider>
+                     )}
+                   </div>
                  )}
-               </span>
+
+                 {/* Sócio Responsável */} 
+                 {responsiblePartner && (
+                   <TooltipProvider>
+                     <Tooltip delayDuration={300}>
+                       <TooltipTrigger asChild>
+                         <Badge variant="outline" className="px-2 py-1 bg-amber-50/80 border-amber-200/70 text-amber-700 hover:bg-amber-100/70 transition-colors">
+                           <UserCheck className="h-3 w-3 mr-1.5 text-amber-500" />
+                           <span className="text-xs font-medium truncate max-w-[150px]">{responsiblePartner.nome}</span>
+                           <div className="ml-1.5 flex items-center justify-center h-4 w-4 rounded-full bg-green-500/20 border border-green-200/70 text-green-600">
+                             <Check className="h-2.5 w-2.5" />
+                           </div>
+                         </Badge>
+                       </TooltipTrigger>
+                       <TooltipContent side="bottom" className="font-normal">
+                         <div className="flex flex-col gap-1 text-xs">
+                           <p className="font-medium">Sócio Responsável</p>
+                           <p>{responsiblePartner.nome}</p>
+                           {responsiblePartner.email && <p className="text-green-500 flex items-center"><AtSign className="h-3 w-3 mr-1" />{responsiblePartner.email}</p>}
+                           {responsiblePartner.telefone && <p className="text-purple-500 flex items-center"><Phone className="h-3 w-3 mr-1" />{responsiblePartner.telefone}</p>}
+                         </div>
+                       </TooltipContent>
+                     </Tooltip>
+                   </TooltipProvider>
+                 )}
+                 
+                 {/* Caso não tenha nem CNPJ/Razão nem Responsável */} 
+                 {!(cnpjValue || razaoSocialValue) && !responsiblePartner && (
+                   <Badge variant="outline" className="px-2 py-1 bg-slate-50/70 border-slate-200/70 text-slate-600">
+                     <Search className="h-3 w-3 mr-1.5 text-slate-500" />
+                     <span className="text-xs italic">Dados da empresa não preenchidos</span>
+                   </Badge>
+                 )}
+               </div>
              )}
            </div>
             {/* Ícone precisa ser explícito aqui, usando ChevronsUpDown */}

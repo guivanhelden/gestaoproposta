@@ -1,4 +1,4 @@
-import React, { useRef, useEffect } from "react";
+import React, { useRef, useEffect, useMemo } from "react";
 import { useForm, SubmitHandler } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import {
@@ -118,6 +118,16 @@ export default function CardModalSupabase({
     isSearchingCnpj,
     handleCnpjSearch,
   } = useProposalDetails(card.submission_id);
+
+  // Encontrar o sócio responsável (usando useMemo)
+  const partnersList = useMemo(() => 
+    (proposalDetails?.partners || []).map((p: any) => formatPartnerForUI(p)), 
+    [proposalDetails?.partners]
+  );
+  const responsiblePartner = useMemo(() => 
+    partnersList.find(p => p.is_responsavel), 
+    [partnersList]
+  );
 
   // --- Busca de Comentários --- 
   const { data: comments, isLoading: isLoadingComments } = useQuery<KanbanCommentWithProfile[]>({
@@ -558,12 +568,13 @@ export default function CardModalSupabase({
                       control={form.control} 
                       onCnpjSearch={handleCnpjSearch} 
                       isSearchingCnpj={isSearchingCnpj}
-                      partners={(proposalDetails?.partners || []).map((p: any) => formatPartnerForUI(p)) as any}
+                      partners={partnersList}
                       companyId={proposalDetails?.company?.id || null}
                       onOpenAddPartner={openAddPartnerDialog}
                       onOpenEditPartner={openEditPartnerDialog}
                       onDeletePartner={handleDeletePartner}
                       isPartnerActionLoading={false}
+                      responsiblePartner={responsiblePartner || null}
                     />
 
                     <Card className="relative overflow-hidden border-border/50 bg-card/50" 

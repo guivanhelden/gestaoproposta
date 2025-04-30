@@ -108,7 +108,9 @@ export default function CardSupabase({ card, onClick, onDragStart }: CardSupabas
                   ? 'bg-red-100 text-red-800' 
                   : card.due_date_status === 'Entrega em breve' 
                     ? 'bg-amber-100 text-amber-800' 
-                    : 'bg-slate-100 text-slate-800'}`
+                    : card.due_date_status === 'No prazo'
+                      ? 'bg-green-100 text-green-800'
+                      : 'bg-slate-100 text-slate-800'}`
               }>
                 {card.due_date_status}
               </span>

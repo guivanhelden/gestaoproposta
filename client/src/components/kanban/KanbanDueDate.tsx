@@ -25,6 +25,7 @@ const getDueDateStatusBadgeVariant = (status: string | null): 'destructive' | 'w
     case 'Entrega em breve':
       return 'warning';
     case 'No prazo':
+      return 'secondary';
     case 'Sem data':
     default:
       return 'secondary';
@@ -146,7 +147,7 @@ export function KanbanDueDate({ cardId, boardId, initialDueDate, initialStatus }
             <div className="text-xs text-gray-500 mb-1">Status:</div>
             <Badge 
               variant={getDueDateStatusBadgeVariant(status)}
-              className="text-sm py-1 px-3"
+              className={`text-sm py-1 px-3 ${status === 'No prazo' ? 'bg-green-100 text-green-800' : ''}`}
             >
               {status}
             </Badge>

@@ -4,6 +4,7 @@ import { ptBR } from "date-fns/locale";
 import { CalendarIcon } from "lucide-react";
 import { Calendar } from "@/components/ui/calendar";
 import { cn } from "@/lib/utils";
+import { createPortal } from "react-dom";
 
 interface DatePickerProps {
   /** Valor da data em formato 'yyyy-MM-dd' */
@@ -102,7 +103,7 @@ export function DatePicker({
       
       {/* Popover simples para o calendário */}
       {isCalendarOpen && !disabled && (
-        <div className="absolute z-50 mt-1 bg-popover rounded-md shadow-md border">
+        <div className="absolute z-[9999] mt-1 bg-popover rounded-md shadow-md border">
           <Calendar
             mode="single"
             selected={displayDate} // Usa o Date interno

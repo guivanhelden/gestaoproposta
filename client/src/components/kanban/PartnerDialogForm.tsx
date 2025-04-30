@@ -5,7 +5,9 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import { Partner } from './CompanyDataForm';
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
-import { ChevronsUpDown } from "lucide-react";
+import { ChevronsUpDown, User, AtSign, Phone, Check, AlertCircle, UserCheck } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 // Interface para os dados que o formulário manipula
 export interface PartnerFormData {
@@ -44,17 +46,77 @@ const PartnerDialogForm: React.FC<PartnerDialogFormProps> = ({
       <Collapsible
         open={isOpen}
         onOpenChange={setIsOpen}
-        className="w-full mb-4 border rounded-md"
+        className="w-full mb-4 border rounded-md shadow-sm"
       >
-        {/* Trigger agora renderiza seu próprio botão, aplicamos estilos nele */}
-        <CollapsibleTrigger className="flex w-full items-center justify-between px-4 py-2 bg-muted/50 rounded-t-md text-sm font-medium hover:underline [&[data-state=open]>svg]:rotate-180">
-           <div className="flex flex-1 items-center justify-between mr-2"> {/* Div interna para layout */} 
-             <span>Detalhes do Sócio</span>
+        <CollapsibleTrigger className="flex w-full items-center justify-between px-4 py-2.5 bg-muted/50 rounded-t-md text-sm font-medium hover:bg-muted/80 transition-colors [&[data-state=open]>svg]:rotate-180">
+           <div className="flex flex-1 items-center justify-between mr-2">
+             <div className="flex items-center">
+               <div className="flex items-center justify-center h-5 w-5 rounded-full bg-primary/10 text-primary mr-1.5">
+                 <User className="h-3 w-3" />
+               </div>
+               <span>Detalhes do Sócio</span>
+               {!isOpen && responsiblePartner?.is_responsavel && (
+                 <Badge variant="outline" className="ml-2 px-1.5 py-0.5 bg-blue-50/80 border-blue-200/70 text-blue-600">
+                   <UserCheck className="h-3 w-3 mr-1 text-blue-500" />
+                   <span className="text-xs">Responsável</span>
+                 </Badge>
+               )}
+             </div>
+             
              {/* Informação extra visível apenas quando fechado (!isOpen) */} 
-             {!isOpen && responsiblePartner && (
-               <span className="text-xs text-muted-foreground truncate ml-4 font-normal">
-                 Responsável: <span className="font-medium">{responsiblePartner.nome}</span>
-               </span>
+             {!isOpen && (
+               <div className="flex flex-wrap items-center gap-1.5 ml-4 max-w-[60%] overflow-hidden">
+                 {responsiblePartner ? (
+                   <TooltipProvider>
+                     <div className="flex flex-wrap items-center gap-1.5">
+                       <Tooltip delayDuration={300}>
+                         <TooltipTrigger asChild>
+                           <Badge variant="outline" className="px-2 py-1 bg-amber-50/80 border-amber-200/70 text-amber-700 hover:bg-amber-100/70 transition-colors">
+                             <User className="h-3 w-3 mr-1.5 text-amber-500" />
+                             <span className="text-xs font-medium truncate max-w-[150px]">{responsiblePartner.nome}</span>
+                           </Badge>
+                         </TooltipTrigger>
+                         <TooltipContent side="bottom" className="font-normal">
+                           <p className="text-xs">{responsiblePartner.nome}</p>
+                         </TooltipContent>
+                       </Tooltip>
+                       
+                       {responsiblePartner.email && (
+                         <Tooltip delayDuration={300}>
+                           <TooltipTrigger asChild>
+                             <Badge variant="outline" className="px-2 py-1 bg-green-50/80 border-green-200/70 text-green-700 hover:bg-green-100/70 transition-colors hidden sm:flex">
+                               <AtSign className="h-3 w-3 mr-1.5 text-green-500" />
+                               <span className="text-xs truncate max-w-[120px]">{responsiblePartner.email}</span>
+                             </Badge>
+                           </TooltipTrigger>
+                           <TooltipContent side="bottom" className="font-normal">
+                             <p className="text-xs">{responsiblePartner.email}</p>
+                           </TooltipContent>
+                         </Tooltip>
+                       )}
+                       
+                       {responsiblePartner.telefone && (
+                         <Tooltip delayDuration={300}>
+                           <TooltipTrigger asChild>
+                             <Badge variant="outline" className="px-2 py-1 bg-purple-50/80 border-purple-200/70 text-purple-700 hover:bg-purple-100/70 transition-colors hidden md:flex">
+                               <Phone className="h-3 w-3 mr-1.5 text-purple-500" />
+                               <span className="text-xs">{responsiblePartner.telefone}</span>
+                             </Badge>
+                           </TooltipTrigger>
+                           <TooltipContent side="bottom" className="font-normal">
+                             <p className="text-xs">Telefone: {responsiblePartner.telefone}</p>
+                           </TooltipContent>
+                         </Tooltip>
+                       )}
+                     </div>
+                   </TooltipProvider>
+                 ) : (
+                   <Badge variant="outline" className="px-2 py-1 bg-red-50/80 border-red-200/70 text-red-700">
+                     <AlertCircle className="h-3 w-3 mr-1.5 text-red-500" />
+                     <span className="text-xs italic">Sem sócio responsável</span>
+                   </Badge>
+                 )}
+               </div>
              )}
            </div>
             {/* Ícone explícito */}
@@ -101,7 +163,12 @@ const PartnerDialogForm: React.FC<PartnerDialogFormProps> = ({
             </div>
 
             <div className="flex items-center justify-between pt-2">
-              <Label htmlFor="is_responsavel">Responsável pela Empresa?</Label>
+              <Label htmlFor="is_responsavel" className="flex items-center">
+                <div className="flex h-5 w-5 items-center justify-center rounded-full bg-blue-500/10 text-blue-500 mr-1.5">
+                  <UserCheck className="h-3 w-3" />
+                </div>
+                Responsável pela Empresa?
+              </Label>
               <Switch
                 id="is_responsavel"
                 checked={formData.is_responsavel || false}

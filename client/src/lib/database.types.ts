@@ -1145,6 +1145,7 @@ export type Database = {
           holder_id: string | null
           id: string
           is_active: boolean | null
+          mother_name: string | null
           name: string
           relationship: string
           updated_at: string | null
@@ -1156,6 +1157,7 @@ export type Database = {
           holder_id?: string | null
           id?: string
           is_active?: boolean | null
+          mother_name?: string | null
           name: string
           relationship: string
           updated_at?: string | null
@@ -1167,6 +1169,7 @@ export type Database = {
           holder_id?: string | null
           id?: string
           is_active?: boolean | null
+          mother_name?: string | null
           name?: string
           relationship?: string
           updated_at?: string | null
@@ -1311,6 +1314,7 @@ export type Database = {
           created_at: string | null
           email: string | null
           id: string
+          mother_name: string | null
           name: string
           phone: string | null
           status: string | null
@@ -1323,6 +1327,7 @@ export type Database = {
           created_at?: string | null
           email?: string | null
           id?: string
+          mother_name?: string | null
           name: string
           phone?: string | null
           status?: string | null
@@ -1335,6 +1340,7 @@ export type Database = {
           created_at?: string | null
           email?: string | null
           id?: string
+          mother_name?: string | null
           name?: string
           phone?: string | null
           status?: string | null

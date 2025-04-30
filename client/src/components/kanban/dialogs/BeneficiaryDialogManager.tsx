@@ -15,8 +15,12 @@ import { Database } from "@/lib/database.types";
 import { format } from "date-fns";
 
 // Tipos do Supabase
-type PmeHolder = Database['public']['Tables']['pme_holders']['Row'];
-type PmeDependent = Database['public']['Tables']['pme_dependents']['Row'];
+type PmeHolder = Database['public']['Tables']['pme_holders']['Row'] & {
+  mother_name?: string | null;
+};
+type PmeDependent = Database['public']['Tables']['pme_dependents']['Row'] & {
+  mother_name?: string | null;
+};
 
 // Valores padrão para o formulário de beneficiário
 const defaultBeneficiaryFormData: BeneficiaryFormData = {
@@ -26,6 +30,7 @@ const defaultBeneficiaryFormData: BeneficiaryFormData = {
   email: '',
   phone: '',
   relationship: '',
+  mother_name: '',
 };
 
 // Tipo para controlar o estado de edição
@@ -100,7 +105,8 @@ export const BeneficiaryDialogManager = forwardRef<any, BeneficiaryDialogManager
             birth_date: formatDateToString(holder.birth_date),
             email: holder.email || '',
             phone: holder.phone || '',
-            relationship: '' // Não aplicável
+            relationship: '', // Não aplicável
+            mother_name: holder.mother_name || ''
         });
         setIsBeneficiaryDialogOpen(true);
     };
@@ -121,7 +127,8 @@ export const BeneficiaryDialogManager = forwardRef<any, BeneficiaryDialogManager
             birth_date: formatDateToString(dependent.birth_date),
             email: '', // Não aplicável
             phone: '', // Não aplicável
-            relationship: dependent.relationship || ''
+            relationship: dependent.relationship || '',
+            mother_name: dependent.mother_name || ''
         });
         setIsBeneficiaryDialogOpen(true);
     };
@@ -162,7 +169,8 @@ export const BeneficiaryDialogManager = forwardRef<any, BeneficiaryDialogManager
                     birth_date: beneficiaryFormData.birth_date,
                     email: beneficiaryFormData.email || null,
                     phone: beneficiaryFormData.phone || null,
-                    status: 'active'
+                    status: 'active',
+                    mother_name: beneficiaryFormData.mother_name || null
                 };
                 
                 console.log(`[BeneficiaryDialogManager] Tentando UPSERT (via POST) para holder ID: ${editingBeneficiary.data?.id || 'novo'}`);
@@ -200,7 +208,8 @@ export const BeneficiaryDialogManager = forwardRef<any, BeneficiaryDialogManager
                     cpf: beneficiaryFormData.cpf || null,
                     birth_date: beneficiaryFormData.birth_date,
                     relationship: beneficiaryFormData.relationship,
-                    is_active: true
+                    is_active: true,
+                    mother_name: beneficiaryFormData.mother_name || null
                 };
                 
                 console.log(`[BeneficiaryDialogManager] Tentando UPSERT (via POST) para dependent ID: ${editingBeneficiary.data?.id || 'novo'}`);

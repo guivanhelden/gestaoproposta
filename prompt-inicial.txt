@@ -238,3 +238,101 @@ Contrato Ativo Vigente	Data de Vigência + Observações + Pós-Venda
 	•	Gerenciar Perfis de Acesso e Permissões
 
 
+Okay, para implementar a estratégia de URL baseada no ID do cartão, similar ao Trello, você precisará usar uma biblioteca de roteamento do lado do cliente (client-side routing) no seu React. A mais comum é a react-router-dom.
+A ideia central é:
+Definir Rotas Específicas: Criar URLs distintas para a visualização do quadro e para a visualização do quadro com um cartão aberto.
+Navegação Programática: Quando um cartão for clicado, em vez de apenas mudar um estado interno (isOpen), você usará a biblioteca de roteamento para navegar para a URL específica daquele cartão.
+Ler Parâmetros da URL: O componente principal (que exibe o quadro e o modal) lerá os parâmetros da URL atual. Se a URL contiver um ID de cartão, ele buscará os dados desse cartão e renderizará o modal.
+Navegação ao Fechar: Quando o modal for fechado, você navegará de volta para a URL base do quadro.
+Estratégia Detalhada usando react-router-dom:
+Instalar react-router-dom:
+
+
+Configurar o Roteador:
+No ponto de entrada da sua aplicação (geralmente App.tsx ou main.tsx), envolva sua aplicação com BrowserRouter.
+
+Definir as Rotas:
+No componente que configura suas rotas (pode ser App.tsx ou um arquivo dedicado de rotas), defina rotas para o quadro e para o quadro com o modal aberto.
+
+Modificar a Lógica de Abrir o Card:
+Onde você atualmente lida com o clique em um cartão (provavelmente dentro do componente do cartão ou no componente do quadro):
+Importe useNavigate de react-router-dom.
+Substitua a lógica de setIsOpen(true) e setSelectedCard(card) por uma chamada de navegação.
+
+
+Ctrl+K to generate a command
+Uma duvida sobre meu projeto, me baseando no Trello o card quando eu abro a url apresenta o ID do Card, 
+
+No meu caso não esta assim, me explica as diferenças @card-modal-supabase.tsx 
+
+Compreendo a sua dúvida. A diferença fundamental entre a forma como o Trello lida com os links dos cartões e a implementação atual no seu projeto (card-modal-supabase.tsx) reside na estratégia de gerenciamento de estado e roteamento.
+Como o Trello (Provavelmente) Funciona:
+Roteamento Baseado em URL: O Trello utiliza o roteamento do lado do cliente (client-side routing). Quando você clica para abrir um cartão, a aplicação não apenas exibe o modal, mas também altera a URL do navegador para incluir um identificador único daquele cartão (ex: /c/cardId/nome-do-cartao).
+Estado Sincronizado com a URL: A aplicação "ouve" as mudanças na URL. Se a URL contiver um ID de cartão, ela busca os dados correspondentes e exibe o modal daquele cartão. Isso permite:
+Compartilhamento: Você pode copiar e colar a URL, e qualquer pessoa com acesso abrirá diretamente aquele cartão.
+Persistência: Se você recarregar a página, o Trello lê a URL novamente e reabre o modal do cartão que estava ativo.
+Histórico de Navegação: Abrir e fechar cartões pode ser registrado no histórico do navegador.
+Como o Seu Projeto (card-modal-supabase.tsx) Funciona:
+Gerenciamento de Estado Interno: No seu código, o modal (MainDialog) é controlado por uma prop isOpen. Essa prop é, muito provavelmente, gerenciada por um estado em um componente pai (o componente que renderiza o quadro Kanban e a lista de cartões).
+Sem Alteração de URL: Quando você clica em um cartão no seu quadro, a lógica do componente pai atualiza o estado para isOpen = true e passa os dados do cartão (card) e a função onClose para o CardModalSupabase. O modal é exibido, mas a URL do navegador não é modificada.
+Dados Passados por Props: Todas as informações necessárias para o modal (ID do cartão, dados iniciais, etc.) são passadas através de props (card, boardId, stages). O modal usa essas props (especialmente card.id e card.submission_id) internamente para buscar mais detalhes (useProposalDetails, busca de comentários, etc.).
+Em Resumo:
+| Característica | Trello (Abordagem URL) | Seu Projeto (Abordagem Estado Interno) |
+| :-------------------- | :------------------------------------- | :------------------------------------------- |
+| Abertura do Modal | Altera a URL + Exibe Modal | Atualiza Estado Interno + Exibe Modal |
+| Identificação | ID do Cartão na URL | ID do Cartão passado via Props (card.id) |
+| Compartilhamento | Fácil (copiar/colar URL) | Não direto (URL não aponta para o modal) |
+| Persistência (Reload) | Modal reabre baseado na URL | Modal fecha (estado interno é perdido) |
+| Complexidade | Maior (requer setup de roteamento) | Menor (gerenciamento de estado padrão) |
+| URL do Navegador | Muda frequentemente (/c/cardId/...) | Permanece a mesma (URL da página principal) |
+Conclusão:
+Seu projeto optou por uma abordagem mais simples e comum para modais, onde a visibilidade é controlada por estado interno, sem impactar a URL. Isso é perfeitamente válido, mas não oferece a funcionalidade de links diretos para cartões como o Trello.
+Se a capacidade de compartilhar links diretos para os modais dos cartões for um requisito importante, seria necessário refatorar a aplicação para implementar um sistema de roteamento que inclua o ID do cartão na URL e sincronize o estado do modal com essa URL.
+o meu fica a URL do kanbanboar, mesmo com o Card Aberto 
+
+Exato, isso está correto e confirma a explicação anterior.
+No seu projeto (card-modal-supabase.tsx e a lógica que o chama), a exibição do modal do cartão é controlada internamente pelo estado da aplicação React (provavelmente uma variável isOpen ou similar no componente pai que renderiza o quadro Kanban).
+Quando você clica em um cartão:
+O estado interno da aplicação é atualizado para indicar que o modal deve ser aberto.
+Os dados do cartão específico são passados como props para o componente CardModalSupabase.
+O modal é renderizado sobre a página do Kanban.
+Crucialmente, nenhuma ação altera a URL do navegador. Por isso, você continua vendo a URL da página do quadro Kanban (ex: /kanban/board-id) mesmo enquanto interage com os detalhes de um cartão específico dentro do modal.
+É uma abordagem diferente da do Trello, que usa a URL para gerenciar o estado de qual cartão está visível.
+para alterar sendo para o card-id como do trello, qual seria a estrategia ? 
+
+Okay, para implementar a estratégia de URL baseada no ID do cartão, similar ao Trello, você precisará usar uma biblioteca de roteamento do lado do cliente (client-side routing) no seu React. A mais comum é a react-router-dom.
+A ideia central é:
+Definir Rotas Específicas: Criar URLs distintas para a visualização do quadro e para a visualização do quadro com um cartão aberto.
+Navegação Programática: Quando um cartão for clicado, em vez de apenas mudar um estado interno (isOpen), você usará a biblioteca de roteamento para navegar para a URL específica daquele cartão.
+Ler Parâmetros da URL: O componente principal (que exibe o quadro e o modal) lerá os parâmetros da URL atual. Se a URL contiver um ID de cartão, ele buscará os dados desse cartão e renderizará o modal.
+Navegação ao Fechar: Quando o modal for fechado, você navegará de volta para a URL base do quadro.
+Estratégia Detalhada usando react-router-dom:
+Instalar react-router-dom:
+Apply to prompt-inici...
+Run
+Configurar o Roteador:
+No ponto de entrada da sua aplicação (geralmente App.tsx ou main.tsx), envolva sua aplicação com BrowserRouter.
+Apply to prompt-inici...
+Definir as Rotas:
+No componente que configura suas rotas (pode ser App.tsx ou um arquivo dedicado de rotas), defina rotas para o quadro e para o quadro com o modal aberto.
+Apply to prompt-inici...
+Modificar a Lógica de Abrir o Card:
+Onde você atualmente lida com o clique em um cartão (provavelmente dentro do componente do cartão ou no componente do quadro):
+Importe useNavigate de react-router-dom.
+Substitua a lógica de setIsOpen(true) e setSelectedCard(card) por uma chamada de navegação.
+Apply to prompt-inici...
+Modificar a Lógica de Renderização do Modal (KanbanBoardPage.tsx):
+Importe useParams para ler o cardId da URL.
+Importe useNavigate para lidar com o fechamento.
+Determine se o modal deve estar aberto com base na presença do cardId na URL.
+Encontre os dados do cartão correspondente ao cardId (você pode precisar buscar na sua lista de cartões ou fazer uma nova busca se necessário).
+Passe a função de navegação para o onClose do modal.
+Ajustar o Fechamento no CardModalSupabase:
+A prop onClose que você passa para MainDialog ou manipula internamente no CardModalSupabase agora deve chamar a função handleCloseModal que foi passada via props (que por sua vez chama navigate).
+
+Considerações Adicionais:
+Busca de Dados: O CardModalSupabase já busca detalhes adicionais com base no card.submission_id. Isso deve continuar funcionando, pois você estará passando o selectedCard (encontrado via cardId da URL) que contém o submission_id.
+Estado Inicial: Ao carregar a página diretamente com uma URL /kanban/:boardId/card/:cardId, o KanbanBoardPage identificará o cardId, encontrará o selectedCard e renderizará o modal corretamente.
+Performance: Encontrar o selectedCard na lista pode ser ineficiente para quadros muito grandes. Você pode otimizar isso ou buscar os dados básicos do cartão especificamente se o cardId estiver na URL ao carregar a página.
+Complexidade: Essa abordagem adiciona a complexidade do roteamento, mas oferece a vantagem de URLs compartilháveis e melhor integração com o histórico do navegador.
+Essa é a estratégia geral. A implementação exata pode variar um pouco dependendo da estrutura específica do seu código e do gerenciamento de estado atual.
