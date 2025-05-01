@@ -1,3 +1,6 @@
+supabase login
+supabase gen types typescript --project-id axuiroefeifjcbtokddq --schema public > client/src/lib/database.types.ts
+
 Crie um sistema (BPM) de Gestão de processos para emissão de propostas de planos de saúde para uma corretora de seguros. Que deve usar Kambam e Cards para gerenciar as propostas. 
 Frontend: React com Vite Estilo: Tailwind CSS
 Cores 1. Roxo VH (#6B1D8C) - Cor primária da marca, usada em títulos, botões e elementos de destaque 2. Fúcsia Impacto (#D340D9) - Cor de destaque/secundária, usada em gradientes e elementos interativos 3. Roxo Claro (#AA2E86) - Cor intermediária, usada principalmente em gradientes e variações 4. Cinza Neutro (#E6E6E6) - Usado para fundos sutis e divisores 5. Cinza Claro Fundo (#F5F5F8) - Usado como fundo neutro para algumas seções 6. Branco (#FFFFFF) - Usado para fundos e texto sobre fundos escuros 7. Preto (#1E1E1E) - Usado no rodapé e em textos principais

@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Control, useWatch, Controller, FieldValues } from 'react-hook-form';
 import { z } from 'zod';
-import { Building2, ChevronDown, Users, Check, X, Edit, Trash2, PlusCircle, Search, MapPin, AtSign, Phone, User, Building, ChevronsUpDown, UserCheck } from "lucide-react";
+import { Building2, ChevronDown, Users, Check, X, Edit, Trash2, PlusCircle, Search, MapPin, AtSign, Phone, User, Building, ChevronsUpDown, UserCheck, AlertTriangle, AlertCircle } from "lucide-react";
 import { IMaskInput } from 'react-imask';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { FormField, FormItem, FormLabel, FormControl, FormMessage, FormDescription } from "@/components/ui/form";
@@ -298,6 +298,79 @@ const CompanyDataForm: React.FC<CompanyDataFormProps> = ({
   // Observa os valores de CNPJ e Razão Social do formulário
   const cnpjValue = useWatch({ control, name: 'cnpj' });
   const razaoSocialValue = useWatch({ control, name: 'razao_social' });
+  const situacaoCadastral = useWatch({ control, name: 'situacao_cadastral' }) || 'ATIVA';
+  
+  // Função para retornar o badge adequado para cada situação cadastral
+  const getSituacaoCadastralInfo = (situacao: string) => {
+    switch (situacao?.toUpperCase()) {
+      case 'ATIVA':
+        return {
+          icon: <Check className="h-4 w-4" />,
+          iconBgColor: 'bg-green-500/10',
+          iconColor: 'text-green-500',
+          badge: (
+            <Badge variant="outline" className="text-xs px-1 py-0.5 font-normal bg-green-50 text-green-600 border-green-200">
+              Ativa
+            </Badge>
+          )
+        };
+      case 'INAPTA':
+        return {
+          icon: <AlertCircle className="h-4 w-4" />,
+          iconBgColor: 'bg-yellow-500/10',
+          iconColor: 'text-yellow-500',
+          badge: (
+            <Badge variant="outline" className="text-xs px-1 py-0.5 font-normal bg-yellow-50 text-yellow-600 border-yellow-200">
+              Inapta
+            </Badge>
+          )
+        };
+      case 'SUSPENSA':
+        return {
+          icon: <AlertTriangle className="h-4 w-4" />,
+          iconBgColor: 'bg-yellow-500/10',
+          iconColor: 'text-yellow-500',
+          badge: (
+            <Badge variant="outline" className="text-xs px-1 py-0.5 font-normal bg-yellow-50 text-yellow-600 border-yellow-200">
+              Suspensa
+            </Badge>
+          )
+        };
+      case 'CANCELADA':
+        return {
+          icon: <X className="h-4 w-4" />,
+          iconBgColor: 'bg-red-500/10',
+          iconColor: 'text-red-500',
+          badge: (
+            <Badge variant="outline" className="text-xs px-1 py-0.5 font-normal bg-red-50 text-red-600 border-red-200">
+              Cancelada
+            </Badge>
+          )
+        };
+      case 'NULA':
+        return {
+          icon: <X className="h-4 w-4" />,
+          iconBgColor: 'bg-red-500/10',
+          iconColor: 'text-red-500',
+          badge: (
+            <Badge variant="outline" className="text-xs px-1 py-0.5 font-normal bg-red-50 text-red-600 border-red-200">
+              Nula
+            </Badge>
+          )
+        };
+      default:
+        return {
+          icon: <AlertCircle className="h-4 w-4" />,
+          iconBgColor: 'bg-gray-500/10',
+          iconColor: 'text-gray-500',
+          badge: (
+            <Badge variant="outline" className="text-xs px-1 py-0.5 font-normal bg-gray-50 text-gray-600 border-gray-200">
+              {situacao || 'Não informada'}
+            </Badge>
+          )
+        };
+    }
+  };
 
   return (
     <Card className="relative overflow-hidden border-border/50 bg-card/50" style={{ boxShadow: "0 4px 20px -5px rgba(0, 4, 255, 0.28), 0 2px 10px -5px rgba(45, 8, 255, 0.32)" }}>
@@ -523,14 +596,12 @@ const CompanyDataForm: React.FC<CompanyDataFormProps> = ({
                         <div>
                           <div className="flex items-center justify-between mb-3">
                             <div className="flex items-center gap-2">
-                              <div className="flex items-center justify-center h-5 w-5 rounded-full bg-green-500/10 text-green-500">
-                                <Check className="h-3 w-3" />
+                              <div className={`flex items-center justify-center h-5 w-5 rounded-full ${getSituacaoCadastralInfo(situacaoCadastral).iconBgColor} ${getSituacaoCadastralInfo(situacaoCadastral).iconColor}`}>
+                                {getSituacaoCadastralInfo(situacaoCadastral).icon}
                               </div>
                               <span className="text-sm font-medium">Situação Cadastral</span>
                             </div>
-                            <Badge variant="outline" className="text-xs px-1 py-0.5 font-normal bg-green-50 text-green-600 border-green-200">
-                              Ativa
-                            </Badge>
+                            {getSituacaoCadastralInfo(situacaoCadastral).badge}
                           </div>
                           
                           <Separator className="my-2" />
@@ -596,7 +667,7 @@ const CompanyDataForm: React.FC<CompanyDataFormProps> = ({
                       <div className="lg:col-span-2">
                         <SimpleFormField 
                           control={control}
-                          name="endereco"
+                          name="logradouro"
                           label="Logradouro"
                           placeholder="Rua, Avenida, etc."
                         />

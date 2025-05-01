@@ -1723,10 +1723,6 @@ export type Database = {
   }
 }
 
-export type KanbanCommentWithProfile = Database['public']['Tables']['kanban_comments']['Row'] & {
-  profiles: Database['public']['Tables']['profiles']['Row'] | null;
-};
-
 type DefaultSchema = Database[Extract<keyof Database, "public">]
 
 export type Tables<

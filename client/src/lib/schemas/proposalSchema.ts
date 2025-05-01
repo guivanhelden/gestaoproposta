@@ -51,6 +51,7 @@ export const proposalSchema = z.object({
   // Campos de pme_grace_periods (usados nos forms)
   has_grace_period: z.boolean().nullable().optional(),
   // grace_start_date, grace_end_date foram removidos por não existirem no tipo retornado
+  previous_operator_id: z.union([z.number(), z.null(), z.undefined()]).optional(),
   grace_reason: z.string().nullable().optional(),
 
   // TODO: Adicionar validação para Sócios (partners), Titulares/Dependentes (holders), Arquivos (files)

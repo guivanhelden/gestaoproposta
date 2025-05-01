@@ -273,6 +273,7 @@ export default function CardModalSupabase({
         pre_proposta: proposalDetails.contract?.pre_proposta || null,
 
         has_grace_period: proposalDetails.grace_period?.has_grace_period ?? false,
+        previous_operator_id: proposalDetails.grace_period?.previous_operator_id || null,
         grace_reason: proposalDetails.grace_period?.reason || null
       });
     } else if (isLoading === false) {
