@@ -64,6 +64,7 @@ import BeneficiariesList from "./BeneficiariesList";
 import { PartnerDialogManager } from './dialogs/PartnerDialogManager';
 import { BeneficiaryDialogManager } from './dialogs/BeneficiaryDialogManager';
 import { KanbanCard } from "@/hooks/use-kanban-cards";
+import ProposalDocuments from "./ProposalDocuments";
 
 // Tipos do Supabase
 type PmePartner = Database['public']['Tables']['pme_company_partners']['Row'];
@@ -664,6 +665,11 @@ export default function CardModalSupabase({
                         />
                       </CardContent>
                     </Card>
+
+                    {/* Seção de Documentos da Proposta */}
+                    {card.submission_id && (
+                      <ProposalDocuments submissionId={card.submission_id} />
+                    )}
 
                     <Card className="border-none shadow-md bg-gradient-to-br from-white to-slate-50 overflow-hidden">
                       <CardHeader className="border-b bg-muted/30 pb-3">
