@@ -116,102 +116,6 @@ export type Database = {
           },
         ]
       }
-      emails: {
-        Row: {
-          body: string | null
-          card_id: string | null
-          created_at: string | null
-          direction: string
-          from_email: string | null
-          id: string
-          message_id: string | null
-          status: string | null
-          subject: string | null
-          to_email: string | null
-        }
-        Insert: {
-          body?: string | null
-          card_id?: string | null
-          created_at?: string | null
-          direction: string
-          from_email?: string | null
-          id?: string
-          message_id?: string | null
-          status?: string | null
-          subject?: string | null
-          to_email?: string | null
-        }
-        Update: {
-          body?: string | null
-          card_id?: string | null
-          created_at?: string | null
-          direction?: string
-          from_email?: string | null
-          id?: string
-          message_id?: string | null
-          status?: string | null
-          subject?: string | null
-          to_email?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "emails_card_id_fkey"
-            columns: ["card_id"]
-            isOneToOne: false
-            referencedRelation: "kanban_cards"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "emails_card_id_fkey"
-            columns: ["card_id"]
-            isOneToOne: false
-            referencedRelation: "view_kanban_cards"
-            referencedColumns: ["card_id"]
-          },
-          {
-            foreignKeyName: "emails_card_id_fkey"
-            columns: ["card_id"]
-            isOneToOne: false
-            referencedRelation: "view_kanban_cards_dependents"
-            referencedColumns: ["card_id"]
-          },
-          {
-            foreignKeyName: "emails_card_id_fkey"
-            columns: ["card_id"]
-            isOneToOne: false
-            referencedRelation: "view_kanban_cards_holders"
-            referencedColumns: ["card_id"]
-          },
-          {
-            foreignKeyName: "fk_card"
-            columns: ["card_id"]
-            isOneToOne: false
-            referencedRelation: "kanban_cards"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "fk_card"
-            columns: ["card_id"]
-            isOneToOne: false
-            referencedRelation: "view_kanban_cards"
-            referencedColumns: ["card_id"]
-          },
-          {
-            foreignKeyName: "fk_card"
-            columns: ["card_id"]
-            isOneToOne: false
-            referencedRelation: "view_kanban_cards_dependents"
-            referencedColumns: ["card_id"]
-          },
-          {
-            foreignKeyName: "fk_card"
-            columns: ["card_id"]
-            isOneToOne: false
-            referencedRelation: "view_kanban_cards_holders"
-            referencedColumns: ["card_id"]
-          },
-        ]
-      }
       equipe: {
         Row: {
           created_at: string
@@ -640,6 +544,80 @@ export type Database = {
           },
           {
             foreignKeyName: "kanban_documents_card_id_fkey"
+            columns: ["card_id"]
+            isOneToOne: false
+            referencedRelation: "view_kanban_cards_holders"
+            referencedColumns: ["card_id"]
+          },
+        ]
+      }
+      kanban_emails: {
+        Row: {
+          attachments: Json | null
+          body_html: string | null
+          body_text: string | null
+          card_id: string
+          created_at: string
+          direction: string | null
+          id: string
+          message_id: string
+          received_at: string
+          recipients: Json | null
+          sender: string | null
+          subject: string | null
+        }
+        Insert: {
+          attachments?: Json | null
+          body_html?: string | null
+          body_text?: string | null
+          card_id: string
+          created_at?: string
+          direction?: string | null
+          id?: string
+          message_id: string
+          received_at?: string
+          recipients?: Json | null
+          sender?: string | null
+          subject?: string | null
+        }
+        Update: {
+          attachments?: Json | null
+          body_html?: string | null
+          body_text?: string | null
+          card_id?: string
+          created_at?: string
+          direction?: string | null
+          id?: string
+          message_id?: string
+          received_at?: string
+          recipients?: Json | null
+          sender?: string | null
+          subject?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "kanban_emails_card_id_fkey"
+            columns: ["card_id"]
+            isOneToOne: false
+            referencedRelation: "kanban_cards"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "kanban_emails_card_id_fkey"
+            columns: ["card_id"]
+            isOneToOne: false
+            referencedRelation: "view_kanban_cards"
+            referencedColumns: ["card_id"]
+          },
+          {
+            foreignKeyName: "kanban_emails_card_id_fkey"
+            columns: ["card_id"]
+            isOneToOne: false
+            referencedRelation: "view_kanban_cards_dependents"
+            referencedColumns: ["card_id"]
+          },
+          {
+            foreignKeyName: "kanban_emails_card_id_fkey"
             columns: ["card_id"]
             isOneToOne: false
             referencedRelation: "view_kanban_cards_holders"

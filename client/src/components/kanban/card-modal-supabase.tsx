@@ -11,7 +11,8 @@ import {
   CalendarClock,
   AlertCircle,
   MessageCircle,
-  Loader2
+  Loader2,
+  Mail
 } from "lucide-react";
 import { 
   Card, 
@@ -53,7 +54,7 @@ import { useToast } from "@/hooks/use-toast";
 import { proposalSchema, ProposalFormData } from "@/lib/schemas/proposalSchema";
 import { useAuth } from '@/hooks/use-auth';
 import supabase from "../../lib/supabase";
-import { Database, KanbanCommentWithProfile } from "@/lib/database.types";
+import { Database } from "@/lib/database.types";
 import { CardModalHeader } from "./CardModalHeader";
 import ProposalGeneralInfo from "./ProposalGeneralInfo";
 import ProposalContractDetails from "./ProposalContractDetails";
@@ -64,7 +65,18 @@ import BeneficiariesList from "./BeneficiariesList";
 import { PartnerDialogManager } from './dialogs/PartnerDialogManager';
 import { BeneficiaryDialogManager } from './dialogs/BeneficiaryDialogManager';
 import { KanbanCard } from "@/hooks/use-kanban-cards";
-import ProposalDocuments from "./ProposalDocuments";
+import ProposalDocuments from "../documents/ProposalDocuments";
+import EmailList from '../email/EmailList';
+import EmailDialogManager, { EmailDialogRef } from './dialogs/EmailDialogManager';
+
+// Definir o tipo KanbanCommentWithProfile localmente
+type KanbanCommentWithProfile = Database['public']['Tables']['kanban_comments']['Row'] & {
+  profiles?: {
+    id: string;
+    name: string | null;
+    avatar_url: string | null;
+  } | null;
+};
 
 // Tipos do Supabase
 type PmePartner = Database['public']['Tables']['pme_company_partners']['Row'];
@@ -110,6 +122,7 @@ export default function CardModalSupabase({
   // Referências para os gerenciadores de diálogo
   const partnerDialogRef = useRef<CardModalProps['partnerDialogRefType']>(null);
   const beneficiaryDialogRef = useRef<CardModalProps['beneficiaryDialogRefType']>(null);
+  const emailDialogRef = useRef<EmailDialogRef>(null);
 
   // Hook personalizado para gerenciar detalhes da proposta
   const {
@@ -515,6 +528,27 @@ export default function CardModalSupabase({
   // Encontrar o título da etapa atual
   const currentStageName = stages.find(stage => stage.id === card.stage_id)?.title || "Etapa Desconhecida";
 
+  // Função para abrir o diálogo de composição de e-mail
+  const openComposeEmail = (replyTo?: string, subject?: string) => {
+    // Usar uma maior espera para garantir que nenhum outro evento
+    // esteja sendo processado ao mesmo tempo
+    setTimeout(() => {
+      // Verificamos a cada chamada se emailDialogRef ainda está disponível
+      if (emailDialogRef.current) {
+        try {
+          emailDialogRef.current.openComposeEmail(replyTo, subject);
+        } catch (error) {
+          console.error("Erro ao abrir diálogo de email:", error);
+          toast({
+            title: "Erro ao abrir email",
+            description: "Não foi possível abrir o formulário de email.",
+            variant: "destructive",
+          });
+        }
+      }
+    }, 100);
+  };
+
   return (
     <>
       <MainDialog open={isOpen} onOpenChange={handleMainDialogOpenChange}>
@@ -537,7 +571,7 @@ export default function CardModalSupabase({
           </MainDialogHeader>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-4">
-            <div className="md:col-span-2">
+            <div className="md:col-span-2 space-y-6">
               {isLoading ? (
                 <div className="space-y-6">
                   <div>
@@ -562,137 +596,154 @@ export default function CardModalSupabase({
                   </div>
                 </div>
               ) : (
-                <Form {...form}>
-                  <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-                    <ProposalGeneralInfo control={form.control} operatorsList={operatorsList} />
+                <>
+                  <Form {...form}>
+                    <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+                      <ProposalGeneralInfo control={form.control} operatorsList={operatorsList} />
 
-                    <CompanyDataForm 
-                      control={form.control} 
-                      onCnpjSearch={handleCnpjSearch} 
-                      isSearchingCnpj={isSearchingCnpj}
-                      partners={partnersList}
-                      companyId={proposalDetails?.company?.id || null}
-                      onOpenAddPartner={openAddPartnerDialog}
-                      onOpenEditPartner={openEditPartnerDialog}
-                      onDeletePartner={handleDeletePartner}
-                      isPartnerActionLoading={false}
-                      responsiblePartner={responsiblePartner || null}
-                    />
+                      <CompanyDataForm 
+                        control={form.control} 
+                        onCnpjSearch={handleCnpjSearch} 
+                        isSearchingCnpj={isSearchingCnpj}
+                        partners={partnersList}
+                        companyId={proposalDetails?.company?.id || null}
+                        onOpenAddPartner={openAddPartnerDialog}
+                        onOpenEditPartner={openEditPartnerDialog}
+                        onDeletePartner={handleDeletePartner}
+                        isPartnerActionLoading={false}
+                        responsiblePartner={responsiblePartner || null}
+                      />
 
-                    <Card className="relative overflow-hidden border-border/50 bg-card/50" 
-                          style={{ boxShadow: "0 4px 20px -5px rgba(0, 4, 255, 0.28), 0 2px 10px -5px rgba(45, 8, 255, 0.32)" }}>
-                      <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-blue-400/30 via-blue-500/60 to-blue-400/30"></div>
-                      
-                      <CardHeader className="p-4 pb-2">
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-2">
-                            <div className="flex items-center justify-center h-7 w-7 rounded-full bg-blue-500/10 text-blue-500">
-                              <Users className="h-4 w-4" />
+                      <Card className="relative overflow-hidden border-border/50 bg-card/50" 
+                            style={{ boxShadow: "0 4px 20px -5px rgba(0, 4, 255, 0.28), 0 2px 10px -5px rgba(45, 8, 255, 0.32)" }}>
+                        <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-blue-400/30 via-blue-500/60 to-blue-400/30"></div>
+                        
+                        <CardHeader className="p-4 pb-2">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                              <div className="flex items-center justify-center h-7 w-7 rounded-full bg-blue-500/10 text-blue-500">
+                                <Users className="h-4 w-4" />
+                              </div>
+                              <CardTitle className="text-base font-medium text-foreground/90">
+                                Beneficiários
+                              </CardTitle>
                             </div>
-                            <CardTitle className="text-base font-medium text-foreground/90">
-                              Beneficiários
-                            </CardTitle>
+                            <Badge variant="outline" className="text-xs">
+                              Titulares e Dependentes
+                            </Badge>
                           </div>
-                          <Badge variant="outline" className="text-xs">
-                            Titulares e Dependentes
-                          </Badge>
-                        </div>
-                        <CardDescription className="text-xs mt-2">
-                          Cadastro de titulares e seus dependentes para o plano
-                        </CardDescription>
-                        <Separator className="mt-2" />
-                      </CardHeader>
-                      <CardContent className="p-6 space-y-4">
-                        <BeneficiariesList 
-                          holders={proposalDetails?.holders} 
-                          onAddHolder={openAddHolderDialog}
-                          onEditHolder={openEditHolderDialog}
-                          onDeleteHolder={handleDeleteHolder}
-                          onAddDependent={openAddDependentDialog}
-                          onEditDependent={openEditDependentDialog}
-                          onDeleteDependent={handleDeleteDependent}
-                          isLoading={false}
-                        />
-                      </CardContent>
-                    </Card>
+                          <CardDescription className="text-xs mt-2">
+                            Cadastro de titulares e seus dependentes para o plano
+                          </CardDescription>
+                          <Separator className="mt-2" />
+                        </CardHeader>
+                        <CardContent className="p-6 space-y-4">
+                          <BeneficiariesList 
+                            holders={proposalDetails?.holders} 
+                            onAddHolder={openAddHolderDialog}
+                            onEditHolder={openEditHolderDialog}
+                            onDeleteHolder={handleDeleteHolder}
+                            onAddDependent={openAddDependentDialog}
+                            onEditDependent={openEditDependentDialog}
+                            onDeleteDependent={handleDeleteDependent}
+                            isLoading={false}
+                          />
+                        </CardContent>
+                      </Card>
 
-                    <ProposalContractDetails control={form.control} />
+                      <ProposalContractDetails control={form.control} />
 
-                    <GracePeriodForm control={form.control} operatorsList={operatorsList} />
+                      <GracePeriodForm control={form.control} operatorsList={operatorsList} />
 
-                    <Card className="relative overflow-hidden border-border/50 bg-card/50" 
-                          style={{ boxShadow: "0 4px 20px -5px rgba(34, 197, 94, 0.28), 0 2px 10px -5px rgba(74, 222, 128, 0.32)" }}>
-                      <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-green-400/30 via-green-500/60 to-green-400/30"></div>
-                      
-                      <CardHeader className="p-4 pb-2">
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-2">
-                            <div className="flex items-center justify-center h-7 w-7 rounded-full bg-green-500/10 text-green-500">
-                              <FileText className="h-4 w-4" />
+                      <Card className="relative overflow-hidden border-border/50 bg-card/50" 
+                            style={{ boxShadow: "0 4px 20px -5px rgba(34, 197, 94, 0.28), 0 2px 10px -5px rgba(74, 222, 128, 0.32)" }}>
+                        <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-green-400/30 via-green-500/60 to-green-400/30"></div>
+                        
+                        <CardHeader className="p-4 pb-2">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                              <div className="flex items-center justify-center h-7 w-7 rounded-full bg-green-500/10 text-green-500">
+                                <FileText className="h-4 w-4" />
+                              </div>
+                              <CardTitle className="text-base font-medium text-foreground/90">
+                                Observações Gerais
+                              </CardTitle>
                             </div>
-                            <CardTitle className="text-base font-medium text-foreground/90">
-                              Observações Gerais
-                            </CardTitle>
+                            <Badge variant="outline" className="text-xs">
+                              Anotações
+                            </Badge>
                           </div>
-                          <Badge variant="outline" className="text-xs">
-                            Anotações
-                          </Badge>
-                        </div>
-                        <CardDescription className="text-xs mt-2">
-                          Anotações gerais e observações sobre o processo da proposta
-                        </CardDescription>
-                        <Separator className="mt-2" />
-                      </CardHeader>
-                      
-                      <CardContent className="p-6 space-y-4">
-                        <FormField
-                          control={form.control}
-                          name="observacoes"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormControl>
-                                <Textarea 
-                                  rows={4} 
-                                  {...field} 
-                                  placeholder="Anotações gerais sobre a proposta, negociação, próximos passos..." 
-                                  value={field.value || ''}
-                                  className="min-h-[120px] resize-none transition-all duration-200 focus-visible:ring-green-500/80 focus-visible:border-green-500/50" 
-                                />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                      </CardContent>
-                    </Card>
+                          <CardDescription className="text-xs mt-2">
+                            Anotações gerais e observações sobre o processo da proposta
+                          </CardDescription>
+                          <Separator className="mt-2" />
+                        </CardHeader>
+                        
+                        <CardContent className="p-6 space-y-4">
+                          <FormField
+                            control={form.control}
+                            name="observacoes"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormControl>
+                                  <Textarea 
+                                    rows={4} 
+                                    {...field} 
+                                    placeholder="Anotações gerais sobre a proposta, negociação, próximos passos..." 
+                                    value={field.value || ''}
+                                    className="min-h-[120px] resize-none transition-all duration-200 focus-visible:ring-green-500/80 focus-visible:border-green-500/50" 
+                                  />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                        </CardContent>
+                      </Card>
 
-                    {/* Seção de Documentos da Proposta */}
-                    {card.submission_id && (
-                      <ProposalDocuments submissionId={card.submission_id} />
-                    )}
+                      {/* Seção de Documentos da Proposta */}
+                      {card.submission_id && (
+                        <ProposalDocuments submissionId={card.submission_id} />
+                      )}
 
-                    <Card className="border-none shadow-md bg-gradient-to-br from-white to-slate-50 overflow-hidden">
-                      <CardHeader className="border-b bg-muted/30 pb-3">
-                        <CardTitle className="flex items-center gap-2 text-base">
-                          <History className="h-4 w-4 text-muted-foreground" />
-                          Histórico
-                        </CardTitle>
-                      </CardHeader>
-                      <CardContent>
-                        <div className="text-sm text-muted-foreground space-y-1">
-                          <p>Criado em: {card.created_at ? formatDate(card.created_at) : 'N/A'}</p> 
-                          <p>Última Atualização: {proposalDetails?.submission?.updated_at ? formatDate(proposalDetails.submission.updated_at) : (card.updated_at ? formatDate(card.updated_at) : 'N/A')}</p> 
-                        </div>
-                      </CardContent>
-                    </Card>
-                  </form>
-                </Form>
+                      {/* Seção de E-mails (acima do histórico) */}
+                      {card && card.id && (
+                        <Card className="relative overflow-hidden border-border/50 bg-card/50" 
+                              style={{ boxShadow: "0 4px 20px -5px rgba(145, 92, 182, 0.28), 0 2px 10px -5px rgba(120, 79, 164, 0.32)" }}>
+                          <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-purple-400/30 via-purple-500/60 to-purple-400/30"></div>
+                          
+                          <EmailList 
+                            cardId={card.id}
+                            onComposeEmail={() => openComposeEmail()}
+                            hideHeader={true}
+                          />
+                        </Card>
+                      )}
+
+                      {/* Seção de Histórico */}
+                      <Card className="border-none shadow-md bg-gradient-to-br from-white to-slate-50 overflow-hidden">
+                        <CardHeader className="border-b bg-muted/30 pb-3">
+                          <CardTitle className="flex items-center gap-2 text-base">
+                            <History className="h-4 w-4 text-muted-foreground" />
+                            Histórico
+                          </CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                          <div className="text-sm text-muted-foreground space-y-1">
+                            <p>Criado em: {card.created_at ? formatDate(card.created_at) : 'N/A'}</p> 
+                            <p>Última Atualização: {proposalDetails?.submission?.updated_at ? formatDate(proposalDetails.submission.updated_at) : (card.updated_at ? formatDate(card.updated_at) : 'N/A')}</p> 
+                          </div>
+                        </CardContent>
+                      </Card>
+                    </form>
+                  </Form>
+                </>
               )}
             </div>
             
             {/* Coluna da direita (Dados da Etapa e Comentários) */}
             <div className="md:col-span-1 flex flex-col gap-6">
-              {/* Card Data de Vencimento (usando o novo componente) */}
+              {/* Card Data de Vencimento */}
               {card && card.id && boardId ? (
                 <KanbanDueDate 
                   cardId={card.id} 
@@ -701,7 +752,6 @@ export default function CardModalSupabase({
                   initialStatus={card.due_date_status} 
                 />
               ) : (
-                // Placeholder ou Skeleton se cardId/boardId não estiverem disponíveis
                 <div className="p-4 bg-gradient-to-b from-muted/60 to-muted/30 rounded-md border shadow-sm h-fit">
                    <Skeleton className="h-6 w-1/2 mb-4" />
                    <Skeleton className="h-10 w-full mb-2" />
@@ -804,6 +854,14 @@ export default function CardModalSupabase({
         onDependentUpdated={handleDependentChange}
         onDependentDeleted={handleDependentDeletion}
       />
+
+      {/* Gerenciador de diálogo de e-mail */}
+      {card && card.id && (
+        <EmailDialogManager
+          ref={emailDialogRef}
+          cardId={card.id}
+        />
+      )}
     </>
   );
 } 

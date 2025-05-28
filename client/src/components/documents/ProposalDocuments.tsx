@@ -4,10 +4,15 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
-import { FolderIcon, FileText, FileQuestion, FileArchive, FileImage } from "lucide-react";
+import { FolderIcon, FileText, FileQuestion, FileArchive, FileImage, ChevronDown, ChevronUp } from "lucide-react";
 import { cn } from "@/lib/utils";
 import supabase from "@/lib/supabase";
 import { Database } from "@/lib/database.types";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
 
 import DocumentCategoryContent from "./DocumentCategoryContent";
 import { DocumentPreviewModal } from "./DocumentPreviewModal";
@@ -43,6 +48,9 @@ export default function ProposalDocuments({ submissionId }: ProposalDocumentsPro
   
   // Estado para controle do arquivo selecionado para visualização
   const [previewFile, setPreviewFile] = useState<PmeFile | null>(null);
+  
+  // Estado para controlar se o collapsible está aberto
+  const [isOpen, setIsOpen] = useState<boolean>(false);
   
   // Hook para manipular cache de consultas
   const queryClient = useQueryClient();
@@ -115,69 +123,84 @@ export default function ProposalDocuments({ submissionId }: ProposalDocumentsPro
   // Renderizar o componente principal
   return (
     <>
-      <Card className="relative overflow-hidden border-border/50 bg-card/50 mt-6"
-            style={{ boxShadow: "0 4px 20px -5px rgba(252, 211, 77, 0.28), 0 2px 10px -5px rgba(245, 158, 11, 0.32)" }}>
-        <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-amber-400/30 via-amber-500/60 to-amber-400/30"></div>
-        
-        <CardHeader className="p-4 pb-2">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <div className="flex items-center justify-center h-7 w-7 rounded-full bg-amber-500/10 text-amber-500">
-                <FileText className="h-4 w-4" />
+      <Collapsible
+        open={isOpen}
+        onOpenChange={setIsOpen}
+        className="w-full"
+      >
+        <Card className="relative overflow-hidden border-border/50 bg-card/50 mt-6"
+              style={{ boxShadow: "0 4px 20px -5px rgba(252, 211, 77, 0.28), 0 2px 10px -5px rgba(245, 158, 11, 0.32)" }}>
+          <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-amber-400/30 via-amber-500/60 to-amber-400/30"></div>
+          
+          <CardHeader className="p-4 pb-2">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <div className="flex items-center justify-center h-7 w-7 rounded-full bg-amber-500/10 text-amber-500">
+                  <FileText className="h-4 w-4" />
+                </div>
+                <CardTitle className="text-base font-medium text-foreground/90">
+                  Documentos
+                </CardTitle>
               </div>
-              <CardTitle className="text-base font-medium text-foreground/90">
-                Documentos
-              </CardTitle>
+              <div className="flex items-center gap-2">
+                <Badge variant="outline" className="text-xs">
+                  {totalFilesCount} {totalFilesCount === 1 ? 'Arquivo' : 'Arquivos'}
+                </Badge>
+                <CollapsibleTrigger asChild>
+                  <button className="h-6 w-6 rounded-md p-1 text-muted-foreground hover:bg-muted">
+                    {isOpen ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                  </button>
+                </CollapsibleTrigger>
+              </div>
             </div>
-            <Badge variant="outline" className="text-xs">
-              {totalFilesCount} {totalFilesCount === 1 ? 'Arquivo' : 'Arquivos'}
-            </Badge>
-          </div>
-          <CardDescription className="text-xs mt-2">
-            Documentos relacionados à proposta, separados por categorias
-          </CardDescription>
-          <Separator className="mt-2" />
-        </CardHeader>
-        
-        <CardContent className="p-4">
-          <Tabs defaultValue="company" value={activeCategory} onValueChange={setActiveCategory}>
-            <TabsList className="mb-4 bg-muted/60 p-1">
-              {Object.keys(CATEGORY_LABELS).map((category) => (
-                <TabsTrigger
-                  key={category}
-                  value={category}
-                  className={cn(
-                    "flex items-center gap-1.5",
-                    activeCategory === category && "bg-background shadow-sm"
-                  )}
-                >
-                  {CATEGORY_ICONS[category]}
-                  <span>{CATEGORY_LABELS[category]}</span>
-                  {filesByCategory[category]?.length > 0 && (
-                    <span className="ml-1 rounded-full bg-primary/10 px-1.5 py-0.5 text-xs text-primary">
-                      {filesByCategory[category].length}
-                    </span>
-                  )}
-                </TabsTrigger>
-              ))}
-            </TabsList>
+            <CardDescription className="text-xs mt-2">
+              Documentos relacionados à proposta, separados por categorias
+            </CardDescription>
+            <Separator className="mt-2" />
+          </CardHeader>
+          
+          <CardContent className="p-4">
+            <Tabs defaultValue="company" value={activeCategory} onValueChange={setActiveCategory}>
+              <TabsList className="mb-4 bg-muted/60 p-1">
+                {Object.keys(CATEGORY_LABELS).map((category) => (
+                  <TabsTrigger
+                    key={category}
+                    value={category}
+                    className={cn(
+                      "flex items-center gap-1.5",
+                      activeCategory === category && "bg-background shadow-sm"
+                    )}
+                  >
+                    {CATEGORY_ICONS[category]}
+                    <span>{CATEGORY_LABELS[category]}</span>
+                    {filesByCategory[category]?.length > 0 && (
+                      <span className="ml-1 rounded-full bg-primary/10 px-1.5 py-0.5 text-xs text-primary">
+                        {filesByCategory[category].length}
+                      </span>
+                    )}
+                  </TabsTrigger>
+                ))}
+              </TabsList>
 
-            {/* Conteúdo das abas */}
-            {Object.keys(CATEGORY_LABELS).map((category) => (
-              <TabsContent key={category} value={category} className="mt-0">
-                <DocumentCategoryContent
-                  files={filesByCategory[category] || []}
-                  category={category}
-                  submissionId={submissionId}
-                  isLoading={isLoading}
-                  onFileChange={refreshFiles}
-                  onPreviewFile={handlePreviewFile}
-                />
-              </TabsContent>
-            ))}
-          </Tabs>
-        </CardContent>
-      </Card>
+              <CollapsibleContent>
+                {/* Conteúdo das abas */}
+                {Object.keys(CATEGORY_LABELS).map((category) => (
+                  <TabsContent key={category} value={category} className="mt-0">
+                    <DocumentCategoryContent
+                      files={filesByCategory[category] || []}
+                      category={category}
+                      submissionId={submissionId}
+                      isLoading={isLoading}
+                      onFileChange={refreshFiles}
+                      onPreviewFile={handlePreviewFile}
+                    />
+                  </TabsContent>
+                ))}
+              </CollapsibleContent>
+            </Tabs>
+          </CardContent>
+        </Card>
+      </Collapsible>
 
       {/* Modal de visualização do arquivo */}
       <DocumentPreviewModal 

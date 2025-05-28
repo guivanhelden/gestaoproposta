@@ -264,6 +264,115 @@ Para continuar melhorando o sistema:
 | Tempo até interatividade | ~4-6s | ~2-3s | 50% |
 | Uso de dados de rede | Alto | Moderado | 40% |
 
+## Sistema de Gerenciamento de Documentos
+
+### Contexto
+
+Foi implementado um sistema completo de gerenciamento de documentos no modal de proposta, permitindo o upload, visualização, download e exclusão de arquivos organizados por categorias.
+
+### Arquitetura
+
+O sistema foi desenvolvido com uma arquitetura modular, com os componentes organizados em uma pasta dedicada:
+
+- **ProposalDocuments**: Componente principal que organiza os documentos em abas por categoria
+- **DocumentCategoryContent**: Exibe a lista de arquivos de uma categoria específica
+- **DocumentListItem**: Mostra detalhes de um arquivo individual com ações
+- **DocumentUpload**: Gerencia o upload de novos arquivos
+- **DocumentPreviewModal**: Modal para visualização inline de documentos
+
+### Características Implementadas
+
+1. **Organização por Categorias**:
+   - Empresa, Carência, Beneficiários, Cotação e Outros
+   - Interface com abas para fácil navegação entre categorias
+   - Contadores visuais da quantidade de arquivos por categoria
+
+2. **Upload Intuitivo**:
+   - Botões dedicados de upload para cada categoria
+   - Feedback visual com barra de progresso durante o upload
+   - Validação de tamanho máximo e tipos de arquivo
+
+3. **Visualização Avançada**:
+   - Visualização nativa de imagens (JPG, PNG, GIF)
+   - Visualização de PDFs com iframe
+   - Suporte a vídeos com controles nativos do navegador
+   - Interface adaptada para diferentes tipos de arquivo
+
+4. **Gerenciamento Seguro**:
+   - Integração direta com Supabase Storage para armazenamento
+   - URLs assinadas com prazo de validade para visualização e download
+   - Confirmação de exclusão para evitar perdas acidentais
+   - Resposta visual para todas as ações (sucesso/erro)
+
+### Integração
+
+O sistema foi integrado ao `CardModalSupabase.tsx`, posicionado após a seção de "Observações Gerais" e antes do "Histórico", aproveitando o layout de grid existente.
+
+```tsx
+{/* Seção de Documentos da Proposta */}
+{card.submission_id && (
+  <ProposalDocuments submissionId={card.submission_id} />
+)}
+```
+
+### Estrutura de Dados
+
+O sistema utiliza a tabela `pme_files` no Supabase para armazenar metadados dos arquivos:
+
+```sql
+create table public.pme_files (
+  id uuid not null default extensions.uuid_generate_v4 (),
+  submission_id uuid null,
+  category text not null,
+  file_name text not null,
+  file_path text not null,
+  file_size integer null,
+  file_type text null,
+  uploaded_at timestamp with time zone null default now(),
+  created_at timestamp with time zone null default now(),
+  updated_at timestamp with time zone null default now(),
+  is_active boolean null default true,
+  constraint pme_files_pkey primary key (id),
+  constraint pme_files_submission_id_fkey foreign KEY (submission_id) references pme_submissions (id) on delete CASCADE,
+  constraint pme_files_category_check check ((category = any (array['company', 'grace', 'beneficiaries', 'quotation', 'others'])))
+)
+```
+
+Os arquivos físicos são armazenados no bucket `pme-attachments` do Supabase Storage, organizados por submissionId e categoria.
+
+### Benefícios
+
+1. **Experiência de Usuário Aprimorada**:
+   - Interface intuitiva e moderna para gerenciamento de documentos
+   - Visualização direta na aplicação sem necessidade de download
+   - Feedback visual para todas as ações realizadas
+
+2. **Organização Eficiente**:
+   - Arquivos categorizados de forma lógica
+   - Fácil localização de documentos específicos
+   - Contadores visuais para rápida identificação de quantidades
+
+3. **Performance**:
+   - Carregamento assíncrono dos arquivos
+   - Visualização otimizada para diferentes tipos de conteúdo
+   - Estados de carregamento com skeletons para feedback visual
+
+4. **Manutenibilidade**:
+   - Componentes reutilizáveis e modulares
+   - Estrutura organizada em pasta dedicada
+   - Tipagem forte para todos os dados e props
+
+### Comparação com Sistema Anterior
+
+| Aspecto | Antes | Depois |
+|---------|-------|--------|
+| Organização | Sem categorização | Categorizado por tipo |
+| Visualização | Apenas download | Visualização inline e download |
+| Interface | Básica/ausente | Moderna e intuitiva |
+| Upload | Manual/externo | Integrado à aplicação |
+| UX | Limitada | Completa com feedback visual |
+| Manutenção | Difícil | Modular e organizada |
+
 ---
 
 *Documento atualizado em: 28 de abril de 2025* 
